@@ -1,9 +1,14 @@
 module.exports = (sequelize, DataTypes) => {
     return sequelize.define('living', {
+        index: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            autoIncrement: true,
+            primaryKey: true
+        },
         name: {
             type: DataTypes.STRING,
             unique: true,
-            primaryKey: true
         },
         brand: {
             type: DataTypes.STRING,

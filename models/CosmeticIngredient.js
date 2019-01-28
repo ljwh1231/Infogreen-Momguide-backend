@@ -1,9 +1,14 @@
 module.exports = (sequelize, DataTypes) => {
     return sequelize.define('cosmetic_ingredient', {
+        index: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            autoIncrement: true,
+            primaryKey: true
+        },
         name: {
             type: DataTypes.STRING,
             unique: true,
-            primaryKey: true
         },
         diff_name: {
             type: DataTypes.STRING,
