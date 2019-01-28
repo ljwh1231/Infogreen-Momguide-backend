@@ -11,9 +11,9 @@ const sequelize = new Sequelize(
     }
 );
 const CosmeticIngredient = require('./CosmeticIngredient')(sequelize, Sequelize);
-const CosmeticDB = require('./CosmeticDB')(sequelize, Sequelize);
+const CosmeticDB = require('./Cosmetic')(sequelize, Sequelize);
 const LivingIngredient = require('./LivingIngredient')(sequelize, Sequelize);
-const LivingDB = require('./LivingDB')(sequelize, Sequelize);
+const LivingDB = require('./Living')(sequelize, Sequelize);
 
 CosmeticIngredient.belongsToMany(CosmeticDB, { through: 'CosmeticIngredientToProduct' });
 CosmeticDB.belongsToMany(CosmeticIngredient, { through: 'CosmeticIngredientToProduct' });
