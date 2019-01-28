@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('CosmeticIngredient', {
+    return sequelize.define('cosmetic_ingredient', {
         name: {
             type: DataTypes.STRING,
             unique: true,
@@ -66,4 +66,4 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: true
         }  
     })
-}
+};

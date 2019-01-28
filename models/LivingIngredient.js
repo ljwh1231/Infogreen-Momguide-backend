@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('LivingIngredient', {
+    return sequelize.define('living_ingredient', {
         index: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -122,4 +122,4 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: true
         }
     })
-}
+};

@@ -1,0 +1,5 @@
+module.exports = {
+    databaseName: 'DATABASE_NAME',
+    databaseID: 'DATABASE_ID',
+    databasePassword: 'DATABASE_PASSWORD'
+};

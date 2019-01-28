@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('CosmeticDB', {
+    return sequelize.define('cosmetic', {
         name: {
             type: DataTypes.STRING,
             allowNull: false,
@@ -18,9 +18,13 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.INTEGER,
             allowNull: false
         },
-        rate: {
-            type: DataTypes.FLOAT,
+        rate_count: {
+            type: DataTypes.INTEGER,
             allowNull: false
+        },
+        rate_sum: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
         }
     })
-}
+};

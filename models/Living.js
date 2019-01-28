@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('LivingDB', {
+    return sequelize.define('living', {
         name: {
             type: DataTypes.STRING,
             unique: true,
@@ -37,9 +37,13 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.INTEGER,
             allowNull: false
         },
-        rate: {
-            type: DataTypes.FLOAT,
+        rate_count: {
+            type: DataTypes.INTEGER,
             allowNull: false
+        },
+        rate_sum: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
         }
     })
-}
+};
