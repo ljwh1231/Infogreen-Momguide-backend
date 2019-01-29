@@ -21,15 +21,18 @@ module.exports = (sequelize, DataTypes) => {
         },
         viewNum: {
             type: DataTypes.INTEGER,
-            allowNull: false
+            allowNull: false,
+            defaultValue: 0
         },
         rateCount: {
             type: DataTypes.INTEGER,
-            allowNull: false
+            allowNull: false,
+            defaultValue: 0
         },
         rateSum: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            defaultValue: 0
         }
     }, {
         underscored: true,
