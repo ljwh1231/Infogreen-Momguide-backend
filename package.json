@@ -18,6 +18,7 @@
   "homepage": "https://github.com/ljwh1231/Infogreen-Momguide-backend#readme",
   "dependencies": {
     "body-parser": "^1.18.3",
+    "csv": "^5.1.1",
     "express": "^4.16.4",
     "mysql": "^2.16.0",
     "mysql2": "^1.6.4",
