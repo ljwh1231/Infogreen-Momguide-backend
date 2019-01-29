@@ -1,7 +1,7 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('cosmetic_ingredient', {
+    return sequelize.define('CosmeticIngredient', {
         index: {
-            type: DataTypes.INTEGER,
+            type: DataTypes.BIGINT,
             allowNull: false,
             autoIncrement: true,
             primaryKey: true
@@ -10,11 +10,11 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             unique: true,
         },
-        diff_name: {
+        diffName: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        eng_name: {
+        engName: {
             type: DataTypes.STRING,
             allowNull: true
         },
@@ -30,11 +30,11 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true
         },
-        ewg_data: {
+        ewgData: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        ewg_code: {
+        ewgCode: {
             type: DataTypes.STRING,
             allowNull: true
         },
@@ -70,5 +70,9 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true
         }  
-    })
+    }, {
+        underscored: true,
+        freezeTableName: true,
+        tableName: 'cosmetic_ingredient'
+    });
 };

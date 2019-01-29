@@ -1,7 +1,7 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('cosmetic', {
+    return sequelize.define('Cosmetic', {
         index: {
-            type: DataTypes.INTEGER,
+            type: DataTypes.BIGINT,
             allowNull: false,
             autoIncrement: true,
             primaryKey: true
@@ -19,17 +19,21 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: false
         },
-        view_num: {
+        viewNum: {
             type: DataTypes.INTEGER,
             allowNull: false
         },
-        rate_count: {
+        rateCount: {
             type: DataTypes.INTEGER,
             allowNull: false
         },
-        rate_sum: {
+        rateSum: {
             type: DataTypes.INTEGER,
             allowNull: false,
         }
+    }, {
+        underscored: true,
+        freezeTableName: true,
+        tableName: 'cosmetic'
     })
 };

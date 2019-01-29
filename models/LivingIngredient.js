@@ -1,18 +1,17 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('living_ingredient', {
+    return sequelize.define('LivingIngredient', {
         index: {
-            type: DataTypes.INTEGER,
+            type: DataTypes.BIGINT,
             allowNull: false,
             primaryKey: true,
             autoIncrement: true
         },
-        kor_name: {
+        korName: {
             type: DataTypes.STRING,
             allowNull: false,
             unique: true
         },
-    
-        eng_name: {
+        engName: {
             type: DataTypes.STRING,
             allowNull: true,
             unique: true
@@ -29,35 +28,35 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true
         },
-        toxic_breath: {
+        toxicBreath: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        toxic_skin: {
+        toxicSkin: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        toxic_dev: {
+        toxicDev: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        toxic_cancer: {
+        toxicCancer: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        score_breath: {
+        scoreBreath: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        score_skin: {
+        scoreSkin: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        score_dev: {
+        scoreDev: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        score_cancer: {
+        scoreCancer: {
             type: DataTypes.STRING,
             allowNull: true
         },
@@ -73,7 +72,7 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true
         },
-        sls_sles: {
+        slsSles: {
             type: DataTypes.BOOLEAN,
             allowNull: true
         },
@@ -101,25 +100,29 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true
         },
-        echa_breath: {
+        echaBreath: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        echa_skin: {
+        echaSkin: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        echa_dev: {
+        echaDev: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        echa_cancer: {
+        echaCancer: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        echa_eye: {
+        echaEye: {
             type: DataTypes.STRING,
             allowNull: true
         }
-    })
+    }, {
+        underscored: true,
+        freezeTableName: true,
+        tableName: 'living_ingredient'
+    });
 };
