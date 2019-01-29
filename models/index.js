@@ -7,7 +7,13 @@ const sequelize = new Sequelize(
     config.databasePassword,
     {
         'host': 'localhost',
-        'dialect': 'mysql'
+        'dialect': 'mysql',
+        define: {
+            charset: 'utf8',
+            dialectOptions: {
+                collate: 'utf8_general_ci'
+            }
+        }
     }
 );
 const CosmeticIngredient = require('./CosmeticIngredient')(sequelize, Sequelize);
