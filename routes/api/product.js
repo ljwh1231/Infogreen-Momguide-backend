@@ -7,7 +7,7 @@ const db = require("../../models/index");
     mainCategory: 'mainCategory',
     subCategory: 'subCatebory'
 }*/
-route.get('/popularRank', (req, res) => {
+route.get('/api/popularRank', (req, res) => {
     if (req.body.mainCategory === 'cosmetic') {
         if(req.body.subCategory === 'soap') {
             db.CosmeticDB.findAll({
@@ -18,7 +18,17 @@ route.get('/popularRank', (req, res) => {
                 order: [
                     db.sequelize.fn('max', db.sequelize.col('view_num'))
                 ]
-            }).then(cosmetics => res.json(cosmetics))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    console.log(result);
+                    res.json(result);
+                }
+            })
+
         } else if (req.body.subCategory === 'lotion') {
             db.CosmeticDB.findAll({
                 limit: 5,
