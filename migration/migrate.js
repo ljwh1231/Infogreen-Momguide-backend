@@ -1,32 +1,10 @@
 const fs = require("fs");
 const csv = require("csv");
 const model = require("../models");
-const Sequelize = require('sequelize');
 const cosmeticData = fs.createReadStream('./data/dbcosmetic.csv');
 const cosmeticComponentsData = fs.createReadStream('./data/cosmetic_components.csv');
 const livingData = fs.createReadStream('./data/dbliving.csv');
 const livingComponentsData = fs.createReadStream('./data/living_components.csv');
-const cosmeticAndComponentData = fs.createReadStream('./data/cosmetic_and_component.csv');
-const livingAndComponentData = fs.createReadStream('./data/living_and_component.csv');
-
-const parser1 = csv.parse({
-    delimiter: ','
-});
-const parser2 = csv.parse({
-    delimiter: ','
-});
-const parser3 = csv.parse({
-    delimiter: ','
-});
-const parser4 = csv.parse({
-    delimiter: ','
-});
-const parser5 = csv.parse({
-    delimiter: ','
-});
-const parser6 = csv.parse({
-    delimiter: ','
-});
 
 // 고유번호,제품명,브랜드,카테고리,조회수,총별점,별점횟수
 const transformCosmetic = csv.transform(function(row) {
@@ -68,13 +46,11 @@ const transformCosmetic = csv.transform(function(row) {
     };
     model.CosmeticDB.create(resultObj)
             .then(function () {
-
             })
             .catch(function(err) {
                 console.log(err);
             })
-            .then(() => process.exit())
-})
+});
 
 // 고유번호,성분명(국문명),이명,영문명,CAS,배합용도,EWG등급,EWG데이터등급,EWG코드,알러지,호흡,피부,발달/생식,발암,눈,주의,비고
 const transformCosmeticComponents = csv.transform(function(row) {
@@ -122,14 +98,12 @@ const transformCosmeticComponents = csv.transform(function(row) {
     };
     model.CosmeticIngredient.create(resultObj)
             .then(function() {
-
             })
             .catch(function(err) {
                 console.log(resultObj);
                 console.log(err);
             })
-            .then(() => process.exit())
-})
+});
 
 // 고유번호, 제품이름, 브랜드, 제조사, 카테고리, 성분공개, 자가검사번호, 기타허가인증여부, 친환경인증여부, 해외인증여부, 조회수, 총별점, 별점인원
 const transformLiving = csv.transform(function(row) {
@@ -193,7 +167,6 @@ const transformLiving = csv.transform(function(row) {
                 console.log(err);
             }
         })
-        .then(() => process.exit());
 });
 
 // 고유번호,성분명(국문),영문명,CAS번호,배합용도,EWG등급,천식/호흡,피부자극,발달/생식,발암,천식/호흡,피부자극,발달/생식,발암,국내유해,D S L,EPA,SLS/SLES,4급암모늄,향료,색소/형광,가습기,비고,S or R,천식/호흡,피부자극,발달/생식,발암,눈자극
@@ -349,56 +322,17 @@ const transformLivingComponent = csv.transform(function(row) {
         echaDevelop: echaDevelop,
         echaCancer: echaCancer,
         echaEye: echaEye
-    }
+    };
 
     model.LivingIngredient.create(resultObj)
         .then(function () {
-
         })
         .catch(function(err) {
             console.log(err);
         })
-        .then(() => process.exit());
-})
+});
 
-
-// Migrate many to many data
-let nowDate = new Date();
-console.log(nowDate.getMonth())
-let timeString = nowDate.getFullYear() + '-' + ('0' + (nowDate.getMonth() + 1)).slice(-2) + '-' + nowDate.getDate() + ' ' + ('0' + nowDate.getHours()).slice(-2) + ':' + ('0' + nowDate.getMinutes()).slice(-2) + ':' + ('0' + nowDate.getSeconds()).slice(-2);
-const insertManyToMany = csv.transform(function(row) {
-    const productIndex = Number(row[0]);
-    if(isNaN(productIndex)) {
-        console.log('cosmetic index가 숫자가 아닙니다.');
-        console.log(row[0]);
-        return;
-    }
-    const ingredientIndex = Number(row[1]);
-    if(isNaN(ingredientIndex)) {
-        console.log('cosmetic ingredient index가 숫자가 아닙니다.');
-        console.log(row[1]);
-        return;
-    }
-    let query = `INSERT INTO cosmetic_ingredient_to_product(created_at, updated_at, cosmetic_ingredient_index,cosmetic_index) VALUES('${timeString}', '${timeString}',${ingredientIndex}, ${productIndex})`;
-    model.sequelize.query(query)
-        .then(function() {
-
-        })
-        .catch(function(err) {
-            console.log(err);
-            console.log(query);
-        })
-        .then(() => process.exit());
-})
-
-function query() {
-    cosmeticData.pipe(parser1).pipe(transformCosmetic);
-    cosmeticComponentsData.pipe(parser2).pipe(transformCosmeticComponents);
-    livingData.pipe(parser3).pipe(transformLiving);
-    livingComponentsData.pipe(parser4).pipe(transformLivingComponent);
-    cosmeticAndComponentData.pipe(parser5).pipe(insertManyToMany);
-    livingAndComponentData.pipe(parser6).pipe(insertManyToMany);
-}
-
-query();
-
+cosmeticData.pipe(csv.parse({delimiter: ','})).pipe(transformCosmetic);
+cosmeticComponentsData.pipe(csv.parse({delimiter: ','})).pipe(transformCosmeticComponents);
+livingData.pipe(csv.parse({delimiter: ','})).pipe(transformLiving);
+livingComponentsData.pipe(csv.parse({delimiter: ','})).pipe(transformLivingComponent);

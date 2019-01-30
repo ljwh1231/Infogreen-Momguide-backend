@@ -6,8 +6,14 @@ const sequelize = new Sequelize(
     config.databaseID,
     config.databasePassword,
     {
-        'host': 'localhost',
-        'dialect': 'mysql',
+        host: 'localhost',
+        dialect: 'mysql',
+        pool: {
+            max: 20,
+            min: 0,
+            acquire: 5000,
+            idle: 5000
+        },
         define: {
             charset: 'utf8',
             dialectOptions: {
