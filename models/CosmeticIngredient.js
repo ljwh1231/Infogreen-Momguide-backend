@@ -8,7 +8,6 @@ module.exports = (sequelize, DataTypes) => {
         },
         name: {
             type: DataTypes.STRING,
-            unique: true,
         },
         diffName: {
             type: DataTypes.STRING,

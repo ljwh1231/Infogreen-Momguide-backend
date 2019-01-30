@@ -9,12 +9,10 @@ module.exports = (sequelize, DataTypes) => {
         korName: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true
         },
         engName: {
             type: DataTypes.STRING,
             allowNull: true,
-            unique: true
         },
         cas: {
             type: DataTypes.STRING,
