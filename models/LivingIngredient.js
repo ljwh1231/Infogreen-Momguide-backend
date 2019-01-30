@@ -94,7 +94,7 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true
         },
-        allergy: {
+        sr: {
             type: DataTypes.STRING,
             allowNull: true
         },
