@@ -47,10 +47,9 @@ router.get('/api/popularRank', (req, res) => {
                     res.json(err);
                 }
                 else {
-                    console.log(result);
                     res.json(result);
                 }
-            })
+            });
 
         } else if (req.body.subCategory === 'lotion') {
             db.CosmeticDB.findAll({
@@ -61,7 +60,16 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(cosmetics => res.json(cosmetics))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
+
         } else if (req.body.subCategory === 'cream') {
             db.CosmeticDB.findAll({
                 limit: 5,
@@ -71,7 +79,16 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(cosmetics => res.json(cosmetics))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
+
         } else if (req.body.subCategory === 'oil') {
             db.CosmeticDB.findAll({
                 limit: 5,
@@ -81,7 +98,16 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(cosmetics => res.json(cosmetics))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
+
         } else if (req.body.subCategory === 'powder') {
             db.CosmeticDB.findAll({
                 limit: 5,
@@ -91,7 +117,16 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(cosmetics => res.json(cosmetics))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
+
         } else if (req.body.subCategory === 'haircare') {
             db.CosmeticDB.findAll({
                 limit: 5,
@@ -101,7 +136,16 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(cosmetics => res.json(cosmetics))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
+
         } else if (req.body.subCategory === 'suncare') {
             db.CosmeticDB.findAll({
                 limit: 5,
@@ -111,7 +155,16 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(cosmetics => res.json(cosmetics))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
+
         } else if (req.body.subCategory === 'tissue') {
             db.CosmeticDB.findAll({
                 limit: 5,
@@ -121,7 +174,16 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(cosmetics => res.json(cosmetics))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
+
         } else if (req.body.subCategory === 'lipcare') {
             db.CosmeticDB.findAll({
                 limit: 5,
@@ -131,7 +193,16 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(cosmetics => res.json(cosmetics))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
+
         } else if (req.body.subCategory === 'other') {
             db.CosmeticDB.findAll({
                 limit: 5,
@@ -141,10 +212,17 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(cosmetics => res.json(cosmetics))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
         }
     } else {
-        console.log(req.body.mainCategory);
         if (req.body.subCategory === 'laundry') {
             db.LivingDB.findAll({
                 limit: 5,
@@ -154,7 +232,16 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(livings => res.json(livings))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
+
         } else if (req.body.subCategory === 'fabric') {
             db.LivingDB.findAll({
                 limit: 5,
@@ -164,9 +251,17 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(livings => res.json(livings))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
+
         } else if (req.body.subCategory === 'dishwashing') {
-            console.log(req.body.subCategory);
             db.LivingDB.findAll({
                 limit: 5,
                 raw: true,
@@ -176,7 +271,16 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(livings => res.json(livings))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
+
         } else if (req.body.subCategory === 'odor') {
             db.LivingDB.findAll({
                 limit: 5,
@@ -186,7 +290,15 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(livings => res.json(livings))
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            })
         } else if (req.body.subCategory === 'other') {
             db.LivingDB.findAll({
                 limit: 5,
@@ -196,9 +308,17 @@ router.get('/api/popularRank', (req, res) => {
                 order: [
                     ['viewNum', 'DESC']
                 ]
-            }).then(livings => res.json(livings));
-        }
-    }
+            }).done(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.json(err);
+                }
+                else {
+                    res.json(result);
+                }
+            });
+        };
+    };
 });
 
 /*
