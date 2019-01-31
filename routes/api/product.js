@@ -1,13 +1,36 @@
 const express = require("express");
-const route = express.Router();
+const router = express.Router();
 
 const db = require("../../models/index");
-
-/* body : {
-    mainCategory: 'mainCategory',
-    subCategory: 'subCatebory'
+const Op = db.sequelize.Op;
+const categoryObject = {
+    'cosmetic': {
+        'soap': '워시',
+        'lotion': '로션',
+        'cream': '크림',
+        'oil': '오일',
+        'powder': '파우더',
+        'haircare': '헤어케어',
+        'suncare': '선케어',
+        'tissue': '물티슈',
+        'lipcare': '립케어',
+        'other': '기타화장품'
+    },
+    'living': {
+        'laundry': '세탁세제',
+        'fabric': '섬유유연제',
+        'dishwashing': '주방세제',
+        'odor': '탈취·방향제'
+    }
+}
+/*  
+    인기 제품 5가지
+    body : {
+        mainCategory: 'mainCategory',
+        subCategory: 'subCatebory'
+    }
 }*/
-route.get('/api/popularRank', (req, res) => {
+router.get('/api/popularRank', (req, res) => {
     if (req.body.mainCategory === 'cosmetic') {
         if(req.body.subCategory === 'soap') {
             db.CosmeticDB.findAll({
@@ -16,7 +39,7 @@ route.get('/api/popularRank', (req, res) => {
                     'category': '워시'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).done(function(err, result) {
                 if (err) {
@@ -36,7 +59,7 @@ route.get('/api/popularRank', (req, res) => {
                     'category': '로션'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(cosmetics => res.json(cosmetics))
         } else if (req.body.subCategory === 'cream') {
@@ -46,7 +69,7 @@ route.get('/api/popularRank', (req, res) => {
                     'category': '크림'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(cosmetics => res.json(cosmetics))
         } else if (req.body.subCategory === 'oil') {
@@ -56,7 +79,7 @@ route.get('/api/popularRank', (req, res) => {
                     'category': '오일'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(cosmetics => res.json(cosmetics))
         } else if (req.body.subCategory === 'powder') {
@@ -66,7 +89,7 @@ route.get('/api/popularRank', (req, res) => {
                     'category': '파우더'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(cosmetics => res.json(cosmetics))
         } else if (req.body.subCategory === 'haircare') {
@@ -76,7 +99,7 @@ route.get('/api/popularRank', (req, res) => {
                     'category': '헤어케어'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(cosmetics => res.json(cosmetics))
         } else if (req.body.subCategory === 'suncare') {
@@ -86,7 +109,7 @@ route.get('/api/popularRank', (req, res) => {
                     'category': '선케어'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(cosmetics => res.json(cosmetics))
         } else if (req.body.subCategory === 'tissue') {
@@ -96,7 +119,7 @@ route.get('/api/popularRank', (req, res) => {
                     'category': '물티슈'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(cosmetics => res.json(cosmetics))
         } else if (req.body.subCategory === 'lipcare') {
@@ -106,7 +129,7 @@ route.get('/api/popularRank', (req, res) => {
                     'category': '립케어'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(cosmetics => res.json(cosmetics))
         } else if (req.body.subCategory === 'other') {
@@ -116,61 +139,106 @@ route.get('/api/popularRank', (req, res) => {
                     'category': '기타화장품'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(cosmetics => res.json(cosmetics))
         }
     } else {
+        console.log(req.body.mainCategory);
         if (req.body.subCategory === 'laundry') {
-            db.CosmeticDB.findAll({
+            db.LivingDB.findAll({
                 limit: 5,
                 where: {
                     'category': '세탁세제'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(livings => res.json(livings))
         } else if (req.body.subCategory === 'fabric') {
-            db.CosmeticDB.findAll({
+            db.LivingDB.findAll({
                 limit: 5,
                 where: {
                     'category': '섬유유연제'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(livings => res.json(livings))
         } else if (req.body.subCategory === 'dishwashing') {
-            db.CosmeticDB.findAll({
+            console.log(req.body.subCategory);
+            db.LivingDB.findAll({
                 limit: 5,
+                raw: true,
                 where: {
                     'category': '주방세제'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(livings => res.json(livings))
         } else if (req.body.subCategory === 'odor') {
-            db.CosmeticDB.findAll({
+            db.LivingDB.findAll({
                 limit: 5,
                 where: {
                     'category': '탈취·방향제'
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
             }).then(livings => res.json(livings))
         } else if (req.body.subCategory === 'other') {
-            db.CosmeticDB.findAll({
+            db.LivingDB.findAll({
                 limit: 5,
                 where: {
                     [Op.or]: [{'category': null}, { 'category': '기타세정제'}]
                 },
                 order: [
-                    db.sequelize.fn('max', db.sequelize.col('view_num'))
+                    ['viewNum', 'DESC']
                 ]
-            }).then(livings => res.json(livings))
+            }).then(livings => res.json(livings));
         }
     }
-})
+});
+
+/*
+    제품 상세 페이지
+    body: {
+        category: 'category',
+        productId: 'id'
+    }
+*/
+
+router.get('/api/details', (req, res) => {
+    const category = req.body.category;
+    const id = req.body.productId;
+    if(category === 'living') {
+        db.LivingIngredient.findAll({
+            include: [{
+                model: db.LivingDB,
+                through: {
+                    attributes: ['createdAt', 'startedAt', 'finishedAt'],
+                    where: {'living_index': id},
+                },
+                required:  true
+            }]
+        }).then((result) => {
+            res.json(result);
+        })
+    } else if (category === 'cosmetic') {
+        db.CosmeticIngredient.findAll({
+            include: [{
+                model: db.CosmeticDB,
+                through: {
+                    attributes: ['createdAt', 'startedAt', 'finishedAt'],
+                    where: {'cosmetic_index': id},
+                },
+                required:  true
+            }]
+        }).then((result) => {
+            res.json(result);
+        })
+    }
+});
+
+module.exports = router;

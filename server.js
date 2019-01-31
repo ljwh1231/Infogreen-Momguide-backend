@@ -9,6 +9,7 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
+app.use(require('./routes'))
 const port = 1234;
 sequelize.sync().then(() => {
     app.listen(port, () => {
