@@ -45,7 +45,7 @@ const insertLivingAndComponentData = csv.transform(function(row) {
         console.log(row[1]);
         return;
     }
-    let query = `INSERT INTO cosmetic_ingredient_to_product(created_at, updated_at, living_ingredient_index, living_index) VALUES('${timeString}', '${timeString}',${ingredientIndex}, ${productIndex})`;
+    let query = `INSERT INTO living_ingredient_to_product(created_at, updated_at, living_ingredient_index, living_index) VALUES('${timeString}', '${timeString}',${ingredientIndex}, ${productIndex})`;
     model.sequelize.query(query)
         .then(function() {
             console.log("create ok");

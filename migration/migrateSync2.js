@@ -25,7 +25,7 @@ const createCosmeticAndComponent = async (row) => {
         console.log(row[1]);
         return;
     }
-    let query = `INSERT INTO c_i_to_p(created_at, updated_at, cosmetic_ingredient_index, cosmetic_index) VALUES('${timeString}', '${timeString}',${ingredientIndex}, ${productIndex})`;
+    let query = `INSERT INTO cosmetic_ingredient_to_product(created_at, updated_at, cosmetic_ingredient_index, cosmetic_index) VALUES('${timeString}', '${timeString}',${ingredientIndex}, ${productIndex})`;
     await model.sequelize.query(query)
 };
 
@@ -46,7 +46,7 @@ const createLivingAndComponentData = async (row) => {
         console.log(row[1]);
         return;
     }
-    let query = `INSERT INTO l_i_to_p(created_at, updated_at, living_ingredient_index, living_index) VALUES('${timeString}', '${timeString}',${ingredientIndex}, ${productIndex})`;
+    let query = `INSERT INTO living_ingredient_to_product(created_at, updated_at, living_ingredient_index, living_index) VALUES('${timeString}', '${timeString}',${ingredientIndex}, ${productIndex})`;
     await model.sequelize.query(query);
 };
 

@@ -188,9 +188,6 @@ const createCosmeticComponents = async (row) => {
         return;
     }
     
-
-
-
     let resultObj = {
         index: index,
         name: name,
@@ -301,7 +298,6 @@ const createLiving = async (row) => {
         return;
     }
 
-    
     let resultObj = {
         index: index,
         name: name,

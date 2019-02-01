@@ -12,9 +12,9 @@ model.LivingIngredient.destroy({
     where: {}
 });
 
-model.CosmeticIngredientToProduct.destroy({
-    where: {}
+model.sequelize.query('DELETE FROM cosmetic_ingredient_to_product', {
+    type: model.sequelize.QueryTypes.DELETE
 });
-model.LivingIngredientToProduct.destroy({
-    where: {}
+model.sequelize.query('DELETE FROM living_ingredient_to_product', {
+    type: model.sequelize.QueryTypes.DELETE
 });
