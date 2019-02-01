@@ -13,7 +13,7 @@ const transformCosmeticAndComponentData = csv.transform(function(row) {
     cosmeticAndComponentDataArray.push(row);
 });
 const createCosmeticAndComponent = async (row) => {
-    const productIndex = Number(row[0]) + 1;
+    const productIndex = Number(row[0]);
     if(isNaN(productIndex)) {
         console.log('cosmetic index가 숫자가 아닙니다.');
         console.log(row[0]);
@@ -34,7 +34,7 @@ const transformLivingAndComponentData = csv.transform(function(row) {
     livingAndComponentDataArray.push(row);
 });
 const createLivingAndComponentData = async (row) => {
-    const productIndex = Number(row[0]) + 1;
+    const productIndex = Number(row[0]);
     if(isNaN(productIndex)) {
         console.log('living index가 숫자가 아닙니다.');
         console.log(row[0]);

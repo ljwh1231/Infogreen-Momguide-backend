@@ -23,12 +23,12 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
             defaultValue: 0
         },
-        rateSum: {
+        rateCount: {
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 0
         },
-        rateCount: {
+        rateSum: {
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 0
