@@ -55,6 +55,18 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 0
+        },
+        includeDanger: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true
+        },
+        includeToxic: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true
+        },
+        includeCare: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true
         }
     }, {
         underscored: true,
