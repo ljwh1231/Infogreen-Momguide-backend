@@ -1,20 +1,23 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('living', {
+    return sequelize.define('Living', {
         index: {
-            type: DataTypes.INTEGER,
+            type: DataTypes.BIGINT,
             allowNull: false,
             autoIncrement: true,
             primaryKey: true
         },
         name: {
             type: DataTypes.STRING,
-            unique: true,
         },
         brand: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        made_by: {
+        madeBy: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        category: {
             type: DataTypes.STRING,
             allowNull: false
         },
@@ -22,7 +25,7 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true
         },
-        test_num: {
+        testNum: {
             type: DataTypes.STRING,
             allowNull: true
         },
@@ -34,21 +37,28 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true
         },
-        foreign_certificate: {
+        foreignCertificate: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        view_num: {
-            type: DataTypes.INTEGER,
-            allowNull: false
-        },
-        rate_count: {
-            type: DataTypes.INTEGER,
-            allowNull: false
-        },
-        rate_sum: {
+        viewNum: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            defaultValue: 0
+        },
+        rateCount: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0
+        },
+        rateSum: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0
         }
-    })
+    }, {
+        underscored: true,
+        freezeTableName: true,
+        tableName: 'living'
+    });
 };
