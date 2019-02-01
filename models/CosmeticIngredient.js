@@ -68,7 +68,27 @@ module.exports = (sequelize, DataTypes) => {
         remarks: {
             type: DataTypes.STRING,
             allowNull: true
-        }  
+        },
+        slsSles: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true
+        },
+        ammonium: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true
+        },
+        scent: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true  
+        },
+        color: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true  
+        },
+        humid: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true  
+        },
     }, {
         underscored: true,
         freezeTableName: true,
