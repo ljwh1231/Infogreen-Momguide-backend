@@ -187,7 +187,7 @@ router.get('/api/goodIngredientItem', (req, res) => {
             order: db.sequelize.literal('rand()')
         }).done(function(err, result) {
             if (err) {
-                console.log(err)
+                console.log(err);
                 res.json(err);
             }
             else {
@@ -206,7 +206,7 @@ router.get('/api/goodIngredientItem', (req, res) => {
             order: db.sequelize.literal('rand()')
         }).done(function(err, result) {
             if (err) {
-                console.log(err)
+                console.log(err);
                 res.json(err);
             }
             else {
@@ -218,81 +218,123 @@ router.get('/api/goodIngredientItem', (req, res) => {
 
 /*
     Category page
-    /api/category?search=name&mainCategory=cosmetic&subCategory=soap&highDanger=true&middleDanger=true&care=true&danger=true&toxic=true&ingredient=true&eco=true&sort=rate&page=1
+    /api/category?search=name&mainCategory=cosmetic&subCategory=soap&careExclude=true&harmExclude=true
+                  &highDangerExclude=true&middleDangerExclude=true&ingredient=true&eco=true&sort=rate&page=1
+
+    sort = rate, view, recent 중 1개의 값일때만 제대로 처리됨
 */
-/*
 router.get('/api/category', (req, res) => {
-    //const name = req.query.search;
-    const name = '';
+    const searchInput = typeof req.query.search === 'undefined' ? '' : req.query.search;
+
+    let category = null;
     const mainCategory = req.query.mainCategory;
     const subCategory = req.query.subCategory;
-    const highDanger = req.query.highDanger;
-    const middleDanger = req.query.care;
-    const care = req.query.care;
-    const danger = req.query.danger;
-    const toxic = req.query.toxic;
-    const ingredient = req.query.ingredient;
-    const eco = req.query.eco === 'true' ? 'O':''; //TODO : eco값 db에 맞추서 수정
-    const sort = req.query.sort;
-    const page = req.query.page;
-
-    let limit = 20;
-    let offset = 0;
-
-    let sortOption;
-    if (sort === 'view') {
-        sortOption = ['viewNum', 'DESC'];
-    } else if (sort === 'rate') {
-        sortOption = [
-            [db.sequelize.literal('rateSum / rateCount DESC')]
-        ]
-    } else if (sort === 'late') {
-        sortOption = ['index', 'DESC'];
+    if(typeof mainCategory !== 'undefined' && typeof subCategory !== 'undefined' && mainCategory in categoryObject &&
+            subCategory in categoryObject[mainCategory]) {
+        category = categoryObject[mainCategory][subCategory];
     }
-    let lowerName = name.toLowerCase();
-    if(mainCategory === 'cosmetic') {
-        db.CosmeticDB.findAll({
-            where: {
-                'name': db.sequelize.where(db.sequelize.fn('LOWER', db.sequelize.col('name')), 'LIKE', '%' + lowerName + '%'),
-                'category': categoryObject[mainCategory][subCategory],
-                'includeHighDanger': highDanger,
-                'includeMiddleDanger': middleDanger,
-                'includeCare': care,
+
+    // 주의 성분 제외 true면 제외시킴
+    const careExclude = req.query.careExclude === 'true';
+    // 유해 성분 제외 true면 제외
+    const harmExclude = req.query.harmExclude === 'true';
+    // 높은 위험 성분 제외 true면 제외
+    const highDangerExclude = req.query.highDangerExclude === 'true';
+    // 중간 위험 성분 제외 true면 제외
+    const middleDangerExclude = req.query.middleDangerExclude === 'true';
+    // 친환경 인증 제품 true면 인증된 제품
+    //  TODO : eco값 db에 맞추서 수정
+    const eco = req.query.eco === 'true';
+    // 성분 공개 제품 true면 공개
+    const ingredient = req.query.ingredient === 'true';
+
+    const sort = req.query.sort;
+    const page = isNaN(Number(req.query.page)) ? 1 : Number(req.query.page);
+
+    // 한 페이지에 보여줄 항목 개수
+    let limit = 20;
+
+    let orderOption = {
+
+    };
+    if (sort === 'view') {
+        orderOption = {
+            order: [['viewNum', 'DESC']]
+        };
+    } else if (sort === 'rate') {
+        orderOption = {
+            order : [[
+                [db.sequelize.literal('rateSum / rateCount DESC')]
+            ]]
+        };
+    } else if (sort === 'recent') {
+        orderOption = {
+            order: [['index', 'DESC']]
+        };
+    }
+
+    let whereOption = {
+        $or: [
+            {
+                'name': db.sequelize.where(db.sequelize.fn('LOWER', db.sequelize.col('name')), 'LIKE', '%' + searchInput.toLowerCase() + '%')
             },
-            order: [
-                sortOption
-            ],
+            {
+                'brand': db.sequelize.where(db.sequelize.fn('LOWER', db.sequelize.col('brand')), 'LIKE', '%' + searchInput.toLowerCase() + '%')
+            }
+        ]
+    };
+    if(category !== null)
+        whereOption['category'] = category;
+
+    if(mainCategory === 'cosmetic') {
+        whereOption['includeHighDanger'] = !highDangerExclude;
+        whereOption['includeMiddleDanger'] = !middleDangerExclude;
+        whereOption['includeCare'] = !careExclude;
+
+        db.CosmeticDB.findAll({
+            ...orderOption,
+            where: whereOption,
             limit: limit,
             offset: limit * (page - 1)
         }).done(function(err, result) {
             if (err) {
-                console.log(err)
+                console.log(err);
                 res.json(err);
             }
             else {
-                console.log(result);
                 res.json(result);
             }
         });
     } else if (mainCategory === 'living') {
+        whereOption['includeDanger'] = !highDangerExclude;
+        whereOption['includeToxic'] = !harmExclude;
+        whereOption['includeCare'] = !careExclude;
+        whereOption['ingredient'] = ingredient;
+        whereOption['eco'] = eco;
+
         db.LivingDB.findAll({
+            ...orderOption,
+            where: whereOption,
             limit: limit,
-            offset: limit * (page - 1),
-            where: {
-                'name': db.sequelize.where(db.sequelize.fn('LOWER', db.sequelize.col('name')), 'LIKE', '%' + lowerName + '%'),
-                'category': categoryObject[mainCategory][subCategory],
-                'includeDanger': danger,
-                'includeToxic': toxic,
-                'includeCare': care,
-                'ingredient': ingredient,
-                'eco': eco
-            },
-            order: [
-                sortOption
-            ]
+            offset: limit * (page - 1)
         }).done(function(err, result) {
             if (err) {
-                console.log(err)
+                console.log(err);
+                res.json(err);
+            }
+            else {
+                res.json(result);
+            }
+        });
+    } else {
+        db.CosmeticDB.findAll({
+            ...orderOption,
+            where: whereOption,
+            limit: limit,
+            offset: limit * (page - 1)
+        }).done(function(err, result) {
+            if (err) {
+                console.log(err);
                 res.json(err);
             }
             else {
@@ -300,6 +342,6 @@ router.get('/api/category', (req, res) => {
             }
         });
     }
-})
-*/
+});
+
 module.exports = router;
