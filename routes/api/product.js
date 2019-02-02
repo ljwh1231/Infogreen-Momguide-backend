@@ -286,10 +286,13 @@ router.get('/api/category', (req, res) => {
     if(category !== null)
         whereOption['category'] = category;
 
-    if(mainCategory === 'cosmetic') {
-        whereOption['includeHighDanger'] = !highDangerExclude;
-        whereOption['includeMiddleDanger'] = !middleDangerExclude;
-        whereOption['includeCare'] = !careExclude;
+    if(category !== null && mainCategory === 'cosmetic') {
+        if(highDangerExclude)
+            whereOption['includeHighDanger'] = !highDangerExclude;
+        if(middleDangerExclude)
+            whereOption['includeMiddleDanger'] = !middleDangerExclude;
+        if(careExclude)
+            whereOption['includeCare'] = !careExclude;
 
         db.CosmeticDB.findAndCountAll({
             where: whereOption
@@ -306,12 +309,17 @@ router.get('/api/category', (req, res) => {
         }).catch((err) => {
             res.status(500).json(err);
         });
-    } else if (mainCategory === 'living') {
-        whereOption['includeDanger'] = !highDangerExclude;
-        whereOption['includeToxic'] = !harmExclude;
-        whereOption['includeCare'] = !careExclude;
-        whereOption['ingredient'] = ingredient;
-        whereOption['eco'] = eco;
+    } else if (category !== null && mainCategory === 'living') {
+        if(highDangerExclude)
+            whereOption['includeDanger'] = !highDangerExclude;
+        if(harmExclude)
+            whereOption['includeToxic'] = !harmExclude;
+        if(careExclude)
+            whereOption['includeCare'] = !careExclude;
+        if(ingredient)
+            whereOption['ingredient'] = ingredient;
+        if(eco)
+            whereOption['eco'] = eco;
 
         db.LivingDB.findAndCountAll({
             where: whereOption
