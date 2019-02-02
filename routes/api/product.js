@@ -371,7 +371,7 @@ router.get('/api/category', (req, res) => {
 
         res.json({
             data: [],
-            totalPages: totalPages
+            totalPages: 0
         });
     }
 });
