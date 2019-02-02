@@ -291,19 +291,20 @@ router.get('/api/category', (req, res) => {
         whereOption['includeMiddleDanger'] = !middleDangerExclude;
         whereOption['includeCare'] = !careExclude;
 
-        db.CosmeticDB.findAll({
-            ...orderOption,
-            where: whereOption,
-            limit: limit,
-            offset: limit * (page - 1)
-        }).done(function(err, result) {
-            if (err) {
-                console.log(err);
-                res.json(err);
-            }
-            else {
-                res.json(result);
-            }
+        db.CosmeticDB.findAndCountAll({
+            where: whereOption
+        }).then((data) => {
+            let totalPages = Math.ceil(data.count / limit);
+            db.CosmeticDB.findAll({
+                ...orderOption,
+                where: whereOption,
+                limit: limit,
+                offset: limit * (page - 1)
+            }).done(function(result) {
+                res.json({data: result, totalPages: totalPages});
+            });
+        }).catch((err) => {
+            res.status(500).json(err);
         });
     } else if (mainCategory === 'living') {
         whereOption['includeDanger'] = !highDangerExclude;
@@ -312,34 +313,65 @@ router.get('/api/category', (req, res) => {
         whereOption['ingredient'] = ingredient;
         whereOption['eco'] = eco;
 
-        db.LivingDB.findAll({
-            ...orderOption,
-            where: whereOption,
-            limit: limit,
-            offset: limit * (page - 1)
-        }).done(function(err, result) {
-            if (err) {
-                console.log(err);
-                res.json(err);
-            }
-            else {
-                res.json(result);
-            }
+        db.LivingDB.findAndCountAll({
+            where: whereOption
+        }).then((data) => {
+            let totalPages = Math.ceil(data.count / limit);
+            db.LivingDB.findAll({
+                ...orderOption,
+                where: whereOption,
+                limit: limit,
+                offset: limit * (page - 1)
+            }).done(function (result) {
+                res.json({data: result, totalPages: totalPages});
+            });
+        }).catch((err) => {
+            res.status(500).json(err);
         });
     } else {
-        db.CosmeticDB.findAll({
-            ...orderOption,
-            where: whereOption,
-            limit: limit,
-            offset: limit * (page - 1)
-        }).done(function(err, result) {
-            if (err) {
-                console.log(err);
-                res.json(err);
-            }
-            else {
-                res.json(result);
-            }
+        /*let totalCount = 0;
+        db.CosmeticDB.findAndCountAll({
+            where: whereOption
+        }).then((data) => {
+            totalCount += data.count;
+            db.CosmeticDB.findAll({
+                ...orderOption,
+                where: whereOption,
+                limit: limit,
+                offset: limit * (page - 1)
+            }).done(function (err, result1) {
+                if (err) {
+                    console.log(err);
+                    res.json(err);
+                    return;
+                }
+
+                db.LivingDB.findAndCountAll({
+                    where: whereOption
+                }).then((data) => {
+                    let totalPages = Math.ceil(data.count+totalCount / limit);
+                    db.LivingDB.findAll({
+                        ...orderOption,
+                        where: whereOption,
+                        limit: limit,
+                        offset: limit * (page - 1)
+                    }).done(function (err, result2) {
+                        if (err) {
+                            console.log(err);
+                            res.json(err);
+                        }
+                        else {
+                            res.json({...result1, ...result2, totalPages: totalPages});
+                            console.log({...result1, ...result2, totalPages: totalPages});
+                        }
+                    });
+                });
+            });
+        });*/
+
+        res.json({
+            data: [],
+            totalPages: totalPages
         });
     }
 });
