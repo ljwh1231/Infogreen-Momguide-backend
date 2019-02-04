@@ -27,9 +27,9 @@ const categoryObject = {
 
 /*  
     인기 제품 5가지
-    /api/popularRank?mainCategory=cosmetic&subCategory=soap
+    /api/product/popularRank?mainCategory=cosmetic&subCategory=soap
 }*/
-router.get('/api/popularRank', (req, res) => {
+router.get('/popularRank', (req, res) => {
     const mainCategory = req.query.mainCategory;
     const subCategory = req.query.subCategory;
     
@@ -51,7 +51,7 @@ router.get('/api/popularRank', (req, res) => {
             [Op.or]: [{'category': null}, {'category': categoryObject[mainCategory][subCategory]}]
         };
     }
-    //console.log(queryCondition);
+
     if(mainCategory === 'cosmetic') {
         db.CosmeticDB.findAll({
             limit: 5,
@@ -89,21 +89,19 @@ router.get('/api/popularRank', (req, res) => {
 
 /*
     제품 상세 페이지
-    /api/details?category=living&productId=1
+    /api/product/details?category=living&productId=1
 */
 
-router.get('/api/details', (req, res) => {
+router.get('/details', (req, res) => {
     const category = req.query.category;
     const id = req.query.productId;
 
     if(typeof category === 'undefined' || typeof id === 'undefined') {
-        console.log('sdfwfwfsdf');
         res.status(400).send();
         return;
     }
 
     if(!(category in categoryObject)) {
-        console.log('debug1123123');
         res.status(400).send();
         return;
     }
@@ -131,12 +129,11 @@ router.get('/api/details', (req, res) => {
             console.log(err);
         });
     } else if (category === 'living') {
-        console.log('debug1');
         db.LivingDB.findOne({
             where: {'index': id}
         }).then((result) => {
             result.update({viewNum: result.dataValues.viewNum + 1});
-            db.CosmeticIngredient.findAll({
+            db.LivingIngredient.findAll({
                 include: [{
                     model: db.LivingDB,
                     through: {
@@ -158,10 +155,10 @@ router.get('/api/details', (req, res) => {
 
 /*
     성분 좋은 제품
-    /api/goodIngredientItem?mainCategory=cosmetic&subCategory=soap
+    /api/product/goodIngredientItem?mainCategory=cosmetic&subCategory=soap
 */
 
-router.get('/api/goodIngredientItem', (req, res) => {
+router.get('/goodIngredientItem', (req, res) => {
     const mainCategory = req.query.mainCategory;
     const subCategory = req.query.subCategory;
 
@@ -218,12 +215,12 @@ router.get('/api/goodIngredientItem', (req, res) => {
 
 /*
     Category page
-    /api/category?search=name&mainCategory=cosmetic&subCategory=soap&careExclude=true&harmExclude=true
+    /api/product/category?search=name&mainCategory=cosmetic&subCategory=soap&careExclude=true&harmExclude=true
                   &highDangerExclude=true&middleDangerExclude=true&ingredient=true&eco=true&sort=rate&page=1
 
     sort = rate, view, recent 중 1개의 값일때만 제대로 처리됨
 */
-router.get('/api/category', (req, res) => {
+router.get('/category', (req, res) => {
     const searchInput = typeof req.query.search === 'undefined' ? '' : req.query.search;
 
     let category = null;
