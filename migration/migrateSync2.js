@@ -26,7 +26,7 @@ const createCosmeticAndComponent = async (row) => {
         return;
     }
     let query = `INSERT INTO cosmetic_ingredient_to_product(created_at, updated_at, cosmetic_ingredient_index, cosmetic_index) VALUES('${timeString}', '${timeString}',${ingredientIndex}, ${productIndex})`;
-    await model.sequelize.query(query)
+    return await model.sequelize.query(query)
 };
 
 const livingAndComponentDataArray = [];
@@ -47,19 +47,19 @@ const createLivingAndComponentData = async (row) => {
         return;
     }
     let query = `INSERT INTO living_ingredient_to_product(created_at, updated_at, living_ingredient_index, living_index) VALUES('${timeString}', '${timeString}',${ingredientIndex}, ${productIndex})`;
-    await model.sequelize.query(query);
+    return await model.sequelize.query(query);
 };
 
 cosmeticAndComponentData.pipe(csv.parse({delimiter: ','})).pipe(transformCosmeticAndComponentData);
-cosmeticAndComponentData.on('end', () => {
-    for(let i = 0; i < cosmeticAndComponentDataArray.length; i++) {
-        createCosmeticAndComponent(cosmeticAndComponentDataArray[i]);
+cosmeticAndComponentData.on('end', async () => {
+    for(const item of cosmeticAndComponentDataArray) {
+        await createCosmeticAndComponent(item);
     }
 });
 
 livingAndComponentData.pipe(csv.parse({delimiter: ','})).pipe(transformLivingAndComponentData);
-livingAndComponentData.on('end', () => {
-    for(let i = 0; i < livingAndComponentDataArray.length; i++) {
-        createLivingAndComponentData(livingAndComponentDataArray[i]);
+livingAndComponentData.on('end', async () => {
+    for(const item of livingAndComponentDataArray) {
+        await createLivingAndComponentData(item);
     }
 });

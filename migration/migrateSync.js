@@ -91,7 +91,7 @@ const createCosmetic = async (row) => {
         includeMiddleDanger: includeMiddleDanger,
         includeCare: includeCare
     };
-    await model.CosmeticDB.create(resultObj);
+    return await model.CosmeticDB.create(resultObj);
 };
 
 // 고유번호,성분명(국문명),이명,영문명,CAS,배합용도,EWG등급,EWG데이터등급,EWG코드,알러지,호흡,피부,발달/생식,발암,눈,주의,비고,sls,암모늄,향료,색소,가습기
@@ -212,7 +212,7 @@ const createCosmeticComponents = async (row) => {
         color: color,
         humid: humid
     };
-    await model.CosmeticIngredient.create(resultObj);
+    return await model.CosmeticIngredient.create(resultObj);
 };
 
 // 고유번호, 제품이름, 브랜드, 제조사, 카테고리, 성분공개, 자가검사번호, 기타허가인증여부, 친환경인증여부, 해외인증여부, 조회수, 총별점, 별점인원
@@ -316,7 +316,7 @@ const createLiving = async (row) => {
         includeToxic: includeToxic,
         includeCare: includeCare
     };
-    await model.LivingDB.create(resultObj);
+    return await model.LivingDB.create(resultObj);
 };
 
 // 고유번호,성분명(국문),영문명,CAS번호,배합용도,EWG등급,천식/호흡,피부자극,발달/생식,발암,천식/호흡,피부자극,발달/생식,발암,국내유해,D S L,EPA,SLS/SLES,4급암모늄,향료,색소/형광,가습기,비고,S or R,천식/호흡,피부자극,발달/생식,발암,눈자극
@@ -478,33 +478,33 @@ const createLivingComponent = async (row) => {
         echaEye: echaEye
     };
 
-    await model.LivingIngredient.create(resultObj);
+    return await model.LivingIngredient.create(resultObj);
 };
 
 cosmeticData.pipe(csv.parse({delimiter: ','})).pipe(transformCosmetic);
-cosmeticData.on('end', () => {
-    for(let i = 0; i < cosmeticArray.length; i++) {
-        createCosmetic(cosmeticArray[i]);
+cosmeticData.on('end', async () => {
+    for(const item of cosmeticArray) {
+        await createCosmetic(item);
     }
 });
 
 cosmeticComponentsData.pipe(csv.parse({delimiter: ','})).pipe(transformCosmeticComponents);
-cosmeticComponentsData.on('end', () => {
-    for(let i = 0; i < cosmeticComponentsArray.length; i++) {
-        createCosmeticComponents(cosmeticComponentsArray[i]);
+cosmeticComponentsData.on('end', async () => {
+    for(const item of cosmeticComponentsArray) {
+        await createCosmeticComponents(item);
     }
 });
 
 livingData.pipe(csv.parse({delimiter: ','})).pipe(transformLiving);
-livingData.on('end', () => {
-    for(let i = 0; i < livingArray.length; i++) {
-        createLiving(livingArray[i]);
+livingData.on('end', async () => {
+    for(const item of livingArray) {
+        await createLiving(item);
     }
 });
 
 livingComponentsData.pipe(csv.parse({delimiter: ','})).pipe(transformLivingComponent);
-livingComponentsData.on('end', () => {
-    for(let i = 0; i < livingComponentArray.length; i++) {
-        createLivingComponent(livingComponentArray[i]);
+livingComponentsData.on('end', async () => {
+    for(const item of livingComponentArray) {
+        await createLivingComponent(item);
     }
 });
