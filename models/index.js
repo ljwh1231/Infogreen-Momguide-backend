@@ -26,6 +26,7 @@ const CosmeticIngredient = require('./CosmeticIngredient')(sequelize, Sequelize)
 const CosmeticDB = require('./Cosmetic')(sequelize, Sequelize);
 const LivingIngredient = require('./LivingIngredient')(sequelize, Sequelize);
 const LivingDB = require('./Living')(sequelize, Sequelize);
+const MemberInfo = require('./MemberInfo')(sequelize, Sequelize);
 
 CosmeticIngredient.belongsToMany(CosmeticDB, { through: 'cosmetic_ingredient_to_product' });
 CosmeticDB.belongsToMany(CosmeticIngredient, { through: 'cosmetic_ingredient_to_product' });
@@ -37,5 +38,6 @@ module.exports = {
     CosmeticDB,
     LivingIngredient,
     LivingDB,
+    MemberInfo,
     sequelize
 };
