@@ -9,6 +9,7 @@ module.exports = (sequelize, DataTypes) => {
         email: {
             type: DataTypes.STRING,
             allowNull: false,
+            unique: true,
             validate: {
                 isEmail: true
             }
@@ -16,14 +17,9 @@ module.exports = (sequelize, DataTypes) => {
         password: {
             type: DataTypes.STRING,
             allowNull: false,
-            validate: {
-                is: ["^[A-Za-z0-9+]*$", "i"],
-                len: [6, 15],
-            }
         },
         photoUrl: {
             type: DataTypes.STRING,
-            allowNull: false,
             validate: {
                 isUrl: true
             }
@@ -63,22 +59,27 @@ module.exports = (sequelize, DataTypes) => {
         },
         name: {
             type: DataTypes.STRING,
+            defaultValue: null
         },
         phoneNum: {
             type: DataTypes.STRING,
             validate: {
                 isNumeric: true,
                 len: [10, 11]
-            }
+            },
+            defaultValue: null
         },
         addressRoad: {
             type: DataTypes.STRING,
+            defaultValue: null
         },
         addressLotNum: {
             type: DataTypes.STRING,
+            defaultValue: null
         },
         addressSpec: {
             type: DataTypes.STRING,
+            defaultValue: null
         },
         rank: {
             type: DataTypes.STRING,
@@ -91,9 +92,6 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.BIGINT,
             defaultValue: 0,
         },
-        salt: { // for encryting
-            type: DataTypes.STRING
-        }
     }, {
         underscored: true,
         freezeTableName: true,
