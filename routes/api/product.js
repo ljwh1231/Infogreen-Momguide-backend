@@ -109,8 +109,8 @@ router.get('/details', (req, res) => {
     if(category === 'cosmetic') {
         db.CosmeticDB.findOne({
             where: {'index': id}
-        }).then((result) => {
-            result.update({viewNum: result.dataValues.viewNum + 1});
+        }).then((cosmeticResult) => {
+            cosmeticResult.update({viewNum: cosmeticResult.dataValues.viewNum + 1});
             db.CosmeticIngredient.findAll({
                 include: [{
                     model: db.CosmeticDB,
@@ -121,7 +121,10 @@ router.get('/details', (req, res) => {
                     required: true
                 }]
             }).then((result) => {
-                res.json(result);
+                res.json({
+                    product: cosmeticResult,
+                    ingredient: result
+                });
             }).catch((err) => {
                 console.log(err);
             });
@@ -131,8 +134,8 @@ router.get('/details', (req, res) => {
     } else if (category === 'living') {
         db.LivingDB.findOne({
             where: {'index': id}
-        }).then((result) => {
-            result.update({viewNum: result.dataValues.viewNum + 1});
+        }).then((livingResult) => {
+            livingResult.update({viewNum: livingResult.dataValues.viewNum + 1});
             db.LivingIngredient.findAll({
                 include: [{
                     model: db.LivingDB,
@@ -143,7 +146,10 @@ router.get('/details', (req, res) => {
                     required: true
                 }]
             }).then((result) => {
-                res.json(result);
+                res.json({
+                    product: livingResult,
+                    ingredient: result
+                });
             }).catch((err) => {
                 console.log(err);
             })
