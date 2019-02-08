@@ -455,11 +455,11 @@ const createLivingComponent = async (row) => {
         ewg: ewg,
         toxicBreath: toxicBreath,
         toxicSkin: toxicSkin,
-        toxicDevelop: toxicDevelop,
+        toxicDev: toxicDevelop,
         toxicCancer: toxicCancer,
         scoreBreath: scoreBreath,
         scoreSkin: scoreSkin,
-        scoreDevelop: scoreDevelop,
+        scoreDev: scoreDevelop,
         scoreCancer: scoreCancer,
         harmness: harmness,
         dsl: dsl,
@@ -473,7 +473,7 @@ const createLivingComponent = async (row) => {
         sr: sr,
         echaBreath: echaBreath,
         echaSkin: echaSkin,
-        echaDevelop: echaDevelop,
+        echaDev: echaDevelop,
         echaCancer: echaCancer,
         echaEye: echaEye
     };
