@@ -16,10 +16,11 @@ module.exports = (sequelize, DataTypes) => {
         },
         password: {
             type: DataTypes.STRING,
-            allowNull: false,
+            allowNull: false
         },
         photoUrl: {
             type: DataTypes.STRING,
+            defaultValue: null,
             validate: {
                 isUrl: true
             }
@@ -38,24 +39,36 @@ module.exports = (sequelize, DataTypes) => {
                 isIn: [['male', 'female']]
             }
         },
-        memberAge: {
+        memberBirthYear: {
             type: DataTypes.INTEGER,
-            allowNull: false,
-            validate: {
-                isIn: [[10, 20, 30, 40]]
-            }
+            allowNull: false
+        },
+        memberBirthMonth: {
+            type: DataTypes.INTEGER,
+            allowNull: false
+        },
+        memberBirthDay: {
+            type: DataTypes.INTEGER,
+            allowNull: false
+        },
+        hasChild: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false
         },
         childBirthYear: {
             type: DataTypes.INTEGER,
-            allowNUll: false,
+            allowNull: false,
+            defaultValue: 0
         },
         childBirthMonth: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            validate: {
-                min: 1,
-                max: 12
-            }
+            defaultValue: 0
+        },
+        childBirthDay: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0
         },
         name: {
             type: DataTypes.STRING,
@@ -92,6 +105,14 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.BIGINT,
             defaultValue: 0,
         },
+        followingNum: { // 해당 유저가 팔로잉하고 있는 유저 수
+            type: DataTypes.BIGINT,
+            defaultValue: 0
+        },
+        followedNum: { // 해당 유저를 팔로잉하고 있는 유저수
+            type: DataTypes.BIGINT,
+            defaultValue: 0
+        }
     }, {
         underscored: true,
         freezeTableName: true,
