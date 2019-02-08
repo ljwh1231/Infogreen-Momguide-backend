@@ -226,14 +226,18 @@ router.get('/goodIngredientItem', (req, res) => {
 
     sort = rate, view, recent 중 1개의 값일때만 제대로 처리됨
 */
-router.get('/category', (req, res) => {
+router.get('/category', async (req, res) => {
     const searchInput = typeof req.query.search === 'undefined' ? '' : req.query.search;
 
     let category = null;
+    const onlyMainCategory = false;
     const mainCategory = req.query.mainCategory;
     const subCategory = req.query.subCategory;
-    if(typeof mainCategory !== 'undefined' && typeof subCategory !== 'undefined' && mainCategory in categoryObject &&
-            subCategory in categoryObject[mainCategory]) {
+
+    if(typeof mainCategory !== 'undefined' && mainCategory in categoryObject) {
+        category = mainCategory;
+    }
+    if(category !== null && typeof subCategory !== 'undefined' && subCategory in categoryObject[mainCategory]) {
         category = categoryObject[mainCategory][subCategory];
     }
 
@@ -246,10 +250,10 @@ router.get('/category', (req, res) => {
     // 중간 위험 성분 제외 true면 제외
     const middleDangerExclude = req.query.middleDangerExclude === 'true';
     // 친환경 인증 제품 true면 인증된 제품
-    //  TODO : eco값 db에 맞추서 수정
-    const eco = req.query.eco === 'true';
+    // 친환경 메시지가 있는 제품을 검색함
+    const ecoInclude = req.query.eco === 'true';
     // 성분 공개 제품 true면 공개
-    const ingredient = req.query.ingredient === 'true';
+    const ingredientInclude = req.query.ingredient === 'true';
 
     const sort = req.query.sort;
     const page = isNaN(Number(req.query.page)) ? 1 : Number(req.query.page);
@@ -257,9 +261,7 @@ router.get('/category', (req, res) => {
     // 한 페이지에 보여줄 항목 개수
     let limit = 20;
 
-    let orderOption = {
-
-    };
+    let orderOption = {};
     if (sort === 'view') {
         orderOption = {
             order: [['viewNum', 'DESC']]
@@ -276,7 +278,7 @@ router.get('/category', (req, res) => {
         };
     }
 
-    let whereOption = {
+    let whereOption = searchInput.length > 0 ? {
         $or: [
             {
                 'name': db.sequelize.where(db.sequelize.fn('LOWER', db.sequelize.col('name')), 'LIKE', '%' + searchInput.toLowerCase() + '%')
@@ -285,9 +287,19 @@ router.get('/category', (req, res) => {
                 'brand': db.sequelize.where(db.sequelize.fn('LOWER', db.sequelize.col('brand')), 'LIKE', '%' + searchInput.toLowerCase() + '%')
             }
         ]
-    };
-    if(category !== null)
-        whereOption['category'] = category;
+    } : {};
+
+    if(category !== null) {
+        if(category === 'living' || category === 'cosmetic') {
+            whereOption['category'] = {
+                $or: Object.keys(categoryObject[category]).map((key) => {
+                    return categoryObject[category][key];
+                })
+            };
+        } else {
+            whereOption['category'] = category;
+        }
+    }
 
     if(category !== null && mainCategory === 'cosmetic') {
         if(highDangerExclude)
@@ -319,10 +331,13 @@ router.get('/category', (req, res) => {
             whereOption['includeToxic'] = !harmExclude;
         if(careExclude)
             whereOption['includeCare'] = !careExclude;
-        if(ingredient)
-            whereOption['ingredient'] = ingredient;
-        if(eco)
-            whereOption['eco'] = eco;
+        if(ingredientInclude)
+            whereOption['ingredient'] = 'O';
+        if(ecoInclude) {
+            whereOption['eco'] = {
+                $not: ''
+            };
+        }
 
         db.LivingDB.findAndCountAll({
             where: whereOption
@@ -337,53 +352,61 @@ router.get('/category', (req, res) => {
                 res.json({data: result, totalPages: totalPages});
             });
         }).catch((err) => {
+            console.log(err);
             res.status(500).json(err);
         });
     } else {
-        /*let totalCount = 0;
-        db.CosmeticDB.findAndCountAll({
+        const offset = limit * (page - 1);
+
+        let data = await db.LivingDB.findAndCountAll({
             where: whereOption
-        }).then((data) => {
-            totalCount += data.count;
-            db.CosmeticDB.findAll({
+        });
+        const livingCount = data.count;
+        data = await db.CosmeticDB.findAndCountAll({
+            where: whereOption
+        });
+        const cosmeticCount = data.count;
+
+        const totalPages = Math.ceil((livingCount + cosmeticCount) / limit);
+        console.log(livingCount, cosmeticCount);
+        console.log(offset);
+        if(livingCount > offset) {
+            console.log("??");
+            db.LivingDB.findAll({
                 ...orderOption,
                 where: whereOption,
                 limit: limit,
                 offset: limit * (page - 1)
-            }).done(function (err, result1) {
-                if (err) {
-                    console.log(err);
-                    res.json(err);
-                    return;
-                }
-
-                db.LivingDB.findAndCountAll({
-                    where: whereOption
-                }).then((data) => {
-                    let totalPages = Math.ceil(data.count+totalCount / limit);
-                    db.LivingDB.findAll({
+            }).done(function (result1) {
+                if(livingCount <= offset + limit) {
+                    db.CosmeticDB.findAll({
                         ...orderOption,
                         where: whereOption,
-                        limit: limit,
-                        offset: limit * (page - 1)
-                    }).done(function (err, result2) {
-                        if (err) {
-                            console.log(err);
-                            res.json(err);
-                        }
-                        else {
-                            res.json({...result1, ...result2, totalPages: totalPages});
-                            console.log({...result1, ...result2, totalPages: totalPages});
-                        }
+                        limit: limit - result1.length,
+                        offset: Math.max(0, limit * (page - 1) - livingCount)
+                    }).done(function (result2) {
+                        res.json({data: result1.concat(result2), totalPages: totalPages});
                     });
+                } else {
+                    res.json({
+                        data: result1,
+                        totalPages: totalPages
+                    })
+                }
+            });
+        } else {
+            db.CosmeticDB.findAll({
+                ...orderOption,
+                where: whereOption,
+                limit: limit,
+                offset: limit * (page - 1) - livingCount
+            }).done(function (result) {
+                res.json({
+                    data: result,
+                    totalPages: totalPages
                 });
             });
-        });*/
-
-        res.json({
-            data: [],
-            totalPages: 0
-        });
+        }
     }
 });
 
