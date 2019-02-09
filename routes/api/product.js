@@ -108,7 +108,7 @@ router.get('/details', (req, res) => {
 
     if(category === 'cosmetic') {
         db.CosmeticDB.findOne({
-            where: {'index': id}
+            where: {'index': id},
         }).then((result) => {
             result.update({viewNum: result.dataValues.viewNum + 1});
             db.CosmeticIngredient.findAll({

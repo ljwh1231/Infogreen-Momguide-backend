@@ -36,8 +36,8 @@ LivingDB.belongsToMany(LivingIngredient, { through: 'living_ingredient_to_produc
 MemberInfo.belongsToMany(MemberInfo, { as: 'follower', foreignKey: 'followee', through: 'follower_to_followee' });
 MemberInfo.belongsToMany(MemberInfo, { as: 'followee', foreignKey: 'follower', through: 'follower_to_followee' });
 
-const MemberToCosmetic = require('./MemberToCosmetic')(sequelize, Sequelize);
-const MemberToLiving = require('./MemberToLiving')(sequelize, Sequelize);
+const MemberToHome = require('./MemberToHome')(sequelize, Sequelize);
+const MemberToLike = require('./MemberToLike')(sequelize, Sequelize);
 
 module.exports = {
     CosmeticIngredient,
@@ -45,7 +45,7 @@ module.exports = {
     LivingIngredient,
     LivingDB,
     MemberInfo,
-    MemberToCosmetic,
-    MemberToLiving,
+    MemberToHome,
+    MemberToLike,
     sequelize
 };

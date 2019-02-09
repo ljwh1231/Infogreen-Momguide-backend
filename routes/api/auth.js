@@ -26,7 +26,6 @@ function decodeToken(token) {
     }
 
     token = token.substring(7);
-    console.log(token);
 
     const promise = new Promise(
         (resolve, reject) => {
@@ -188,7 +187,7 @@ router.get('/register/checkEmail', (req, res) => {
             });
         } else {
             res.json({
-                is인Duplicated: true
+                isDuplicated: true
             });
         }
     })
@@ -283,7 +282,7 @@ router.post('/login', (req, res) => {
 
 
 /*
-    > 회원정보 가져오기기
+    > 회원정보 가져오기(팔로잉/팔로우는 추후에)
     > GET /api/auth/info
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것
     > db의 row가 json으로 넘어오니 필요한 정보를 받아 사용
@@ -306,7 +305,7 @@ router.get('/info', (req, res) => {
             where: {
                 index: token.index,
                 email: token.email
-            }
+            },
         }).then((result) => {
             if (!result) {
                 res.json({
@@ -331,7 +330,7 @@ router.get('/info', (req, res) => {
     > 우리집 화장품 등록
     > POST /api/auth/addHomeCosmetic
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isHome: true로 전달
+    > mainCategory: true
     > 400: invalid request
       403: unauthorized access
 */
@@ -339,15 +338,15 @@ router.post('/addHomeCosmetic', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.cosmeticIndex) {
+        if (!token.index || !token.email || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
 
-        db.MemberToCosmetic.create({
+        db.MemberToHome.create({
             memberIndex: token.index,
-            cosmeticIndex: req.body.cosmeticIndex,
-            isHome: true
+            productIndex: req.body.productIndex,
+            isCosmetic: true
         }).done((err, result) => {
             if (err) {
                 res.json(err);
@@ -368,7 +367,7 @@ router.post('/addHomeCosmetic', (req, res) => {
     > 우리집 생활화학제품 등록 
     > POST /api/auth/addHomeLiving
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isHome: true로 전달
+    > isCosmetic: true로 전달
     > 400: invalid request
       403: unauthorized access
 */
@@ -376,15 +375,15 @@ router.post('/addHomeLiving', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.livingIndex) {
+        if (!token.index || !token.email || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
 
-        db.MemberToLiving.create({
+        db.MemberToHome.create({
             memberIndex: token.index,
-            livingIndex: req.body.livingIndex,
-            isHome: true
+            productIndex: req.body.productIndex,
+            isCosmetic: false
         }).done((err, result) => {
             if (err) {
                 res.json(err);
@@ -403,9 +402,9 @@ router.post('/addHomeLiving', (req, res) => {
 
 /*
     > 우리집 화장품 취소 
-    > POST /api/auth/cancelHomeCosmetic
+    > DELETE /api/auth/cancelHomeCosmetic
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isHome: true로 전달
+    > isCosmetic: true로 전달
     > 400: invalid request
       403: unauthorized access
       error: {
@@ -416,16 +415,16 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.cosmeticIndex) {
+        if (!token.index || !token.email || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
 
-        db.MemberToCosmetic.destroy({
+        db.MemberToHome.destroy({
             where: {
                 memberIndex: token.index,
-                cosmeticIndex: req.body.cosmeticIndex,
-                isHome: true
+                productIndex: req.body.productIndex,
+                isCosmetic: true
             }
         }).then((result) => {
             if (!result) {
@@ -449,7 +448,7 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
     > 우리집 생활화학제품 취소 
     > POST /api/auth/cancelHomeLiving
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isHome: true로 전달
+    > isCosmetic: false로 전달
     > 400: invalid request
       403: unauthorized access
       error: {
@@ -460,16 +459,16 @@ router.delete('/cancelHomeLiving', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.livingIndex) {
+        if (!token.index || !token.email || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
 
-        db.MemberToLiving.destroy({
+        db.MemberToHome.destroy({
             where: {
                 memberIndex: token.index,
-                livingIndex: req.body.livingIndex,
-                isHome: true
+                productIndex: req.body.productIndex,
+                isCosmetic: false
             }
         }).then((result) => {
             if (!result) {
@@ -493,7 +492,7 @@ router.delete('/cancelHomeLiving', (req, res) => {
     > 찜 화장품 등록
     > POST /api/auth/addLikeCosmetic
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isHome: false로 전달
+    > isCosmetic: true로 등록
     > 400: invalid request
       403: unauthorized access
 */
@@ -501,15 +500,15 @@ router.post('/addLikeCosmetic', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.cosmeticIndex) {
+        if (!token.index || !token.email || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
 
-        db.MemberToCosmetic.create({
+        db.MemberToLike.create({
             memberIndex: token.index,
-            cosmeticIndex: req.body.cosmeticIndex,
-            isHome: false
+            productIndex: req.body.productIndex,
+            isCosmetic: true
         }).done((err, result) => {
             if (err) {
                 res.json(err);
@@ -529,7 +528,7 @@ router.post('/addLikeCosmetic', (req, res) => {
     > 찜 생활화학제품 등록 
     > POST /api/auth/addLikeLiving
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isHome: false로 전달
+    > isCosmetic: false로 전달
     > 400: invalid request
       403: unauthorized access
 */
@@ -537,15 +536,15 @@ router.post('/addLikeLiving', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.livingIndex) {
+        if (!token.index || !token.email || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
 
-        db.MemberToLiving.create({
+        db.MemberToLike.create({
             memberIndex: token.index,
-            livingIndex: req.body.livingIndex,
-            isHome: false
+            productIndex: req.body.productIndex,
+            isCosmetic: false
         }).done((err, result) => {
             if (err) {
                 res.json(err);
@@ -564,9 +563,9 @@ router.post('/addLikeLiving', (req, res) => {
 
 /*
     > 찜 화장품 취소 
-    > POST /api/auth/cancelLikeCosmetic
+    > DELETE /api/auth/cancelLikeCosmetic
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isHome: false로 전달
+    > isCosmetic: true로 전달
     > 400: invalid request
       403: unauthorized access
       error: {
@@ -577,16 +576,16 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.cosmeticIndex) {
+        if (!token.index || !token.email || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
 
-        db.MemberToCosmetic.destroy({
+        db.MemberToLike.destroy({
             where: {
                 memberIndex: token.index,
-                cosmeticIndex: req.body.cosmeticIndex,
-                isHome: false
+                productIndex: req.body.productIndex,
+                isCosmetic: true
             }
         }).then((result) => {
             if (!result) {
@@ -608,9 +607,9 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
 
 /*
     > 찜 생활화학제품 취소 
-    > POST /api/auth/cancelLikeLiving
+    > DELETE /api/auth/cancelLikeLiving
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isHome: false로 전달
+    > isCosmetic: false로 전달
     > 400: invalid request
       403: unauthorized access
       error: {
@@ -621,16 +620,16 @@ router.delete('/cancelLikeLiving', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.livingIndex) {
+        if (!token.index || !token.email || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
 
-        db.MemberToLiving.destroy({
+        db.MemberToLike.destroy({
             where: {
                 memberIndex: token.index,
-                livingIndex: req.body.livingIndex,
-                isHome: false
+                productIndex: req.body.productIndex,
+                isCosmetic: false
             }
         }).then((result) => {
             if (!result) {
@@ -650,15 +649,17 @@ router.delete('/cancelLikeLiving', (req, res) => {
 });
 
 
-// 회원정보 받는거 수정(관심 상품 뜨게)
-// 회원정보 받는거 수정(리뷰 뜨게)
+
+// 회원정보 받는거 수정(팔로잉/팔로워)
 
 // 구글
 // 카카오
 // 네이버
 
 // 비밀번호 찾기
-
+// 우리집 상품
+// 찜한 상품
+// 리뷰
 // 회원정보 수정
 
 module.exports = router;

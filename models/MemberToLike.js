@@ -1,16 +1,16 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('MemberToLiving', {
+    return sequelize.define('MemberToLike', {
         memberIndex: {
             type: DataTypes.BIGINT,
             allowNull: false,
             primaryKey: true
         },
-        livingIndex: {
+        productIndex: {
             type: DataTypes.BIGINT,
             allowNull: false,
             primaryKey: true
         },
-        isHome: {
+        isCosmetic: {
             type: DataTypes.BOOLEAN,
             allowNull: false,
             primaryKey: true
@@ -18,6 +18,6 @@ module.exports = (sequelize, DataTypes) => {
     }, {
         underscored: true,
         freezeTableName: true,
-        tableName: 'member_to_living'
+        tableName: 'member_to_like'
     })
 };
