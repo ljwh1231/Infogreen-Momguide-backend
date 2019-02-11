@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
+const mailReq = require("superagent");
 
 const db = require("../../models/index");
 
@@ -10,6 +11,10 @@ const jwt = require('jsonwebtoken');
 const formidable = require('express-formidable');
 
 const config = require('../../config/config');
+
+const mailchimpInstance   = 'us20';
+const listUniqueId        = '654054dea8';
+const mailchimpApiKey     = 'e6efd62eda528273f5473ef9254f8e53-us20';
 
 // function to get extension in filename
 function getExtension(fileName) {
@@ -72,7 +77,7 @@ async function findProduct(prevResult) {
     > 회원가입
     > POST /api/auth/register
     > form data로 데이터 전달. 각 데이터의 이름은 디비와 통일.
-    > 필수로 전달해야하는 데이터는 email, password, nickName, gender, memberBirthYear, memberBirthMonth,memberBirthDay, hasChild
+    > 필수로 전달해야하는 데이터는 email, password, nickName, gender, memberBirthYear, memberBirthMonth,memberBirthDay, hasChild, mailed
       나머지 정보는 있으면 각 이름에 맞게 넣어서 보내고 없으면 아예 객체에 추가하지 말기. hasChild가 true일 땐 childBirthYear, childBirthMonth, childBirthDay도
       필수로 보내기. false라면 자녀 생년 월일은 보내지 말기.
     > 주소는 주소 API 자체가 도로명 + 지번 + 상세로 되어있으므로 세 개를 각각 보내면 됨. 저 셋 중 하나가 없을 수도 있는데 없으면 넣지 말기.
@@ -93,7 +98,7 @@ router.post('/register', formidable(), (req, res) => {
 
     if (!req.fields.email || !req.fields.password || !req.fields.nickName 
             || !req.fields.gender || !req.fields.memberBirthYear || !req.fields.memberBirthMonth
-            || !req.fields.memberBirthDay || !req.fields.hasChild) {
+            || !req.fields.memberBirthDay || !req.fields.hasChild || !req.fields.mailed) {
             
         res.status(400).send("invalid request");
         return;
@@ -112,6 +117,7 @@ router.post('/register', formidable(), (req, res) => {
     infoObj.memberBirthMonth = Number(req.fields.memberBirthMonth);
     infoObj.memberBirthDay = Number(req.fields.memberBirthDay);
     infoObj.hasChild = req.fields.hasChild;
+    infoObj.mailed = req.fields.mailed;
 
     if (req.fields.hasChild === true) {
         if (!req.fields.childBirthYear || !req.fields.childBirthMonth || !req.fields.childBirthDay) {
@@ -143,49 +149,59 @@ router.post('/register', formidable(), (req, res) => {
     if (req.fields.addressSpec) {
         infoObj.addressSpec = req.fields.addressSpec;
     }
-    
-    bcrypt.genSalt(10, (err, salt) => {
-        if (err) {
-            console.log(err);
-        } else {
-            bcrypt.hash(req.fields.password, salt, null, (err, hash) => {
-                if (err) {
-                    console.log(err);
-                } else {
-                    infoObj.password = hash;
 
-                    if (!(typeof req.files.image === 'undefined')) {
-                        params.Key = "profile-images/" + infoObj.email + getExtension(req.files.image.name);
-                        params.Body = require('fs').createReadStream(req.files.image.path);
+    mailReq.post('https://' + mailchimpInstance + '.api.mailchimp.com/3.0/lists/' + listUniqueId + '/members/')
+        .set('Content-Type', 'application/json;charset=utf-8')
+        .set('Authorization', 'Basic ' + new Buffer('any:' + mailchimpApiKey ).toString('base64'))
+        .send({
+          'email_address': req.fields.email,
+          'status': req.fields.mailed ? 'subscribed' : 'unsubscribed'
+        }).end((err, response) => {
+            if (response.status < 300 || (response.status === 400 && response.body.title === "Member Exists")) {
+                bcrypt.genSalt(10, (err, salt) => {
+                    if (err) {
+                        console.log(err);
                     } else {
-                        params.Key = "NO";
-                        params.Body = "NO";
-                    }
-                    s3.putObject(params, function(err, data) {
-                        if (err) {
-                            console.log(err)
-                        } else {
-                            if (!(params.Key === "NO") && !(params.Key === "NO")) {
-                                infoObj.photoUrl = "https://s3.ap-northeast-2.amazonaws.com/infogreenmomguide/" + params.Key;
+                        bcrypt.hash(req.fields.password, salt, null, (err, hash) => {
+                            if (err) {
+                                console.log(err);
+                            } else {
+                                infoObj.password = hash;
+            
+                                if (!(typeof req.files.image === 'undefined')) {
+                                    params.Key = "profile-images/" + infoObj.email + getExtension(req.files.image.name);
+                                    params.Body = require('fs').createReadStream(req.files.image.path);
+                                } else {
+                                    params.Key = "NO";
+                                    params.Body = "NO";
+                                }
+                                s3.putObject(params, function(err, data) {
+                                    if (err) {
+                                        console.log(err)
+                                    } else {
+                                        if (!(params.Key === "NO") && !(params.Key === "NO")) {
+                                            infoObj.photoUrl = "https://s3.ap-northeast-2.amazonaws.com/infogreenmomguide/" + params.Key;
+                                        }
+                                        db.MemberInfo.create(
+                                            infoObj
+                                        ).done(function(err, result) {
+                                            if (err) {
+                                                res.json(err);
+                                            }
+                                            else {
+                                                res.json(result);
+                                            }
+                                        });
+                                    }
+                                });
                             }
-
-                            db.MemberInfo.create(
-                                infoObj
-                            ).done(function(err, result) {
-                                if (err) {
-                                    res.json(err);
-                                }
-                                else {
-                                    res.json(result);
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-        }
-    });
-
+                        });
+                    }
+                });
+            } else {
+              res.status(400).send("invalid request");
+            }
+        });
 });
 
 /*
@@ -761,8 +777,7 @@ router.get('/info/likeProduct', (req, res) => {
 });
 
 // 비밀번호 찾기
-// 우리집 상품
-// 찜한 상품
+
 // 리뷰
 // 회원정보 수정
 

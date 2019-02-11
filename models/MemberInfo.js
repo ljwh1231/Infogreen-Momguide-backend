@@ -70,6 +70,10 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
             defaultValue: 0
         },
+        mailed: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false
+        },
         name: {
             type: DataTypes.STRING,
             defaultValue: null
