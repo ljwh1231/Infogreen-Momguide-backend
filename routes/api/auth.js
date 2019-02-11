@@ -42,6 +42,32 @@ function decodeToken(token) {
     return promise;
 }
 
+// async function to find one in product db
+async function findProduct(prevResult) {
+    let returnArray = [[], []];
+
+    for (let i=0; i<prevResult.length; ++i) {
+        if (prevResult[i].dataValues.isCosmetic) {
+            await db.CosmeticDB.findOne({
+                where: {
+                    index: prevResult[i].dataValues.productIndex
+                }
+            }).then((result) => {
+                returnArray[0].push(result.dataValues);
+            });
+        } else {
+            await db.LivingDB.findOne({
+                where: {
+                    index: prevResult[i].dataValues.productIndex
+                }
+            }).then((result) => {
+                returnArray[1].push(result.dataValues);
+            });
+        }
+    }
+    return returnArray;
+}
+
 /*
     > 회원가입
     > POST /api/auth/register
@@ -655,6 +681,84 @@ router.delete('/cancelLikeLiving', (req, res) => {
 // 구글
 // 카카오
 // 네이버
+
+/*
+    > 우리집 화학제품 불러오기 
+    > get /api/auth/info/homeProduct
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
+    > 결과를 두 배열을 가지고 있는 배열 하나로 전달. 첫번째 배열은 화장품, 두번째 배열은 화학제품. 각 배열에 해당 제품들의 정보 객체들이 있음.
+    > 400: invalid request
+      403: unauthorized access
+      error: {
+          "no info": 해당하는 정보의 유저가 없음(사실 로그인을 했다면 당연히 있겠지만)
+      }
+*/
+router.get('/info/homeProduct', (req, res) => {
+    let token = req.headers['token'];
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email) {
+            res.status(400).send("invalid request");
+            return;
+        }
+
+        db.MemberToHome.findAll({
+            where: {
+                memberIndex: token.index
+            }
+        }).then((result) => {
+            if (!result) {
+                res.json([]);
+            } else {
+                findProduct(result).then((finalResult) => {
+                    res.json(finalResult);
+                });
+            }
+        });
+    }).catch((error) => {
+        res.status(403).send("unauthorized request");
+        return;
+    })
+});
+
+/*
+    > 찜한 제품 불러오기 
+    > get /api/auth/info/likeProduct
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
+    > 결과를 두 배열을 가지고 있는 배열 하나로 전달. 첫번째 배열은 화장품, 두번째 배열은 화학제품. 각 배열에 해당 제품들의 정보 객체들이 있음.
+    > 400: invalid request
+      403: unauthorized access
+      error: {
+          "no info": 해당하는 정보의 유저가 없음(사실 로그인을 했다면 당연히 있겠지만)
+      }
+*/
+router.get('/info/likeProduct', (req, res) => {
+    let token = req.headers['token'];
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email) {
+            res.status(400).send("invalid request");
+            return;
+        }
+
+        db.MemberToLike.findAll({
+            where: {
+                memberIndex: token.index
+            }
+        }).then((result) => {
+            if (!result) {
+                res.json([]);
+            } else {
+                findProduct(result).then((finalResult) => {
+                    res.json(finalResult);
+                });
+            }
+        });
+    }).catch((error) => {
+        res.status(403).send("unauthorized request");
+        return;
+    })
+});
 
 // 비밀번호 찾기
 // 우리집 상품
