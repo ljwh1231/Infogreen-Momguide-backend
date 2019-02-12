@@ -17,7 +17,9 @@
   },
   "homepage": "https://github.com/ljwh1231/Infogreen-Momguide-backend#readme",
   "dependencies": {
+    "axios": "^0.18.0",
     "body-parser": "^1.18.3",
+    "circular-json": "^0.5.9",
     "cors": "^2.8.5",
     "csv": "^5.1.1",
     "express": "^4.16.4",
