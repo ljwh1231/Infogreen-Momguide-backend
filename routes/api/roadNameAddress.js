@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const config = require('../../config/config');
-const axios = require('axios');
-const circularJson = require('circular-json');
+const request = require('request');
+const queryString = require('querystring');
 
 /*
  * GET /api/roadNameAddress
@@ -22,37 +22,25 @@ router.get('/', (req, res) => {
         });
     }
 
-    console.log(JSON.stringify({
+    const form = {
         confmKey: config.roadNameAddressAPIKey,
         currentPage: Number(currentPage),
         countPerPage: Number(countPerPage),
         keyword: keyword,
         resultType: 'json'
-    }));
+    };
+    const formData = queryString.stringify(form);
 
-    const dataObject = new FormData();
-    dataObject.append('confmKey', config.roadNameAddressAPIKey);
-    dataObject.append('currentPage', Number(currentPage));
-    dataObject.append('countPerPage', Number(countPerPage));
-    dataObject.append('keyword', keyword);
-    dataObject.append(resultType, 'json');
-
-    axios({
-        method: 'post',
-        url: 'http://www.juso.go.kr/addrlink/addrLinkApi.do',
-        data: dataObject,
+    request({
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        }
-    }).then((roadRes) => {
-        console.log(roadRes);
-        res.json({
-            data: roadRes.data
-        });
-    }).catch((err) => {
-        res.status(400).json({
-            message: 'API error'
-        });
+            'Content-Length': formData.length,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        uri: 'http://www.juso.go.kr/addrlink/addrLinkApi.do',
+        body: formData,
+        method: 'POST'
+    }, (err, response, body) => {
+        res.send(body);
     });
 });
 
