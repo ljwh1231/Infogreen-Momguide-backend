@@ -1,5 +1,6 @@
 module.exports = {
     databaseName: 'DATABASE_NAME',
     databaseID: 'DATABASE_ID',
-    databasePassword: 'DATABASE_PASSWORD'
+    databasePassword: 'DATABASE_PASSWORD',
+    roadNameAddressAPIKey: 'API_KEY'
 };
