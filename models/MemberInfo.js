@@ -28,6 +28,7 @@ module.exports = (sequelize, DataTypes) => {
         nickName: {
             type: DataTypes.STRING,
             allowNull: false,
+            unique: true,
             validate: {
                 len: [0, 6]
             }
@@ -86,15 +87,19 @@ module.exports = (sequelize, DataTypes) => {
             },
             defaultValue: null
         },
+        postalCode: {
+            type: DataTypes.STRING,
+            defaultValue: null
+        },
         addressRoad: {
             type: DataTypes.STRING,
             defaultValue: null
         },
-        addressLotNum: {
+        addressSpec: {
             type: DataTypes.STRING,
             defaultValue: null
         },
-        addressSpec: {
+        addressEtc: {
             type: DataTypes.STRING,
             defaultValue: null
         },

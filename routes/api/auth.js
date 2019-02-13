@@ -77,11 +77,11 @@ async function findProduct(prevResult) {
     > 회원가입
     > POST /api/auth/register
     > form data로 데이터 전달. 각 데이터의 이름은 디비와 통일.
-    > 필수로 전달해야하는 데이터는 email, password, nickName, gender, memberBirthYear, memberBirthMonth,memberBirthDay, hasChild, mailed
-      나머지 정보는 있으면 각 이름에 맞게 넣어서 보내고 없으면 아예 객체에 추가하지 말기. hasChild가 true일 땐 childBirthYear, childBirthMonth, childBirthDay도
-      필수로 보내기. false라면 자녀 생년 월일은 보내지 말기.
-    > 주소는 주소 API 자체가 도로명 + 지번 + 상세로 되어있으므로 세 개를 각각 보내면 됨. 저 셋 중 하나가 없을 수도 있는데 없으면 넣지 말기.
-      휴대전화번호는 '-' 생략하여 숫자로만 이루어진 string으로 보내기
+    > 필수정보: email(이메일), password(비밀번호), nickName(닉네임), gender(성별), memberBirthYear(회원생년), memberBirthMonth(회원생월), memberBirthDay(회원생일),
+      hasChild(자녀여부), mailed(홍보메일수신여부)
+    > 필수/선택정보(hasChild가 true일 경우엔 필수로 받기. 아니면 받지 않기.): childBirthYear(자식생년), childBirthMonth(자식생월), childBirthDay(자식생일)
+    > 선택정보: name(이름), phoneNum(휴대폰번호 - "-" 빼고 숫자로만 이루어진 string으로), postalCode(우편번호), addressRoad(도로명 주소), addressSpec(상세주소),
+      addressEtc(참고주소)
     > 400: invalid request
       412: precondition unsatisfied
 */
@@ -116,10 +116,10 @@ router.post('/register', formidable(), (req, res) => {
     infoObj.memberBirthYear = Number(req.fields.memberBirthYear);
     infoObj.memberBirthMonth = Number(req.fields.memberBirthMonth);
     infoObj.memberBirthDay = Number(req.fields.memberBirthDay);
-    infoObj.hasChild = req.fields.hasChild;
-    infoObj.mailed = req.fields.mailed;
+    infoObj.hasChild = req.fields.hasChild === 'true';
+    infoObj.mailed = req.fields.mailed === 'true';
 
-    if (req.fields.hasChild === true) {
+    if (infoObj.hasChild === true) {
         if (!req.fields.childBirthYear || !req.fields.childBirthMonth || !req.fields.childBirthDay) {
             res.status(400).send("invalid request");
             return;
@@ -138,24 +138,28 @@ router.post('/register', formidable(), (req, res) => {
         infoObj.phoneNum = req.fields.phoneNum;
     }
 
-    if (req.fields.addressRoad) {
-        infoObj.addressRoad = req.fields.addressRoad;
+    if (req.fields.postalCode) {
+        infoObj.postalCode = req.fields.postalCode;
     }
 
-    if (req.fields.addressLotNum) {
-        infoObj.addressLotNum = req.fields.addressLotNum;
+    if (req.fields.addressRoad) {
+        infoObj.addressRoad = req.fields.addressRoad;
     }
 
     if (req.fields.addressSpec) {
         infoObj.addressSpec = req.fields.addressSpec;
     }
 
+    if (req.fields.addressEtc) {
+        infoObj.addressEtc = req.fields.addressEtc;
+    }
+
     mailReq.post('https://' + mailchimpInstance + '.api.mailchimp.com/3.0/lists/' + listUniqueId + '/members/')
         .set('Content-Type', 'application/json;charset=utf-8')
         .set('Authorization', 'Basic ' + new Buffer('any:' + mailchimpApiKey ).toString('base64'))
         .send({
-          'email_address': req.fields.email,
-          'status': req.fields.mailed ? 'subscribed' : 'unsubscribed'
+          'email_address': infoObj.email,
+          'status': (infoObj.mailed) ? 'subscribed' : 'unsubscribed'
         }).end((err, response) => {
             if (response.status < 300 || (response.status === 400 && response.body.title === "Member Exists")) {
                 bcrypt.genSalt(10, (err, salt) => {
@@ -776,9 +780,47 @@ router.get('/info/likeProduct', (req, res) => {
     })
 });
 
-// 비밀번호 찾기
+// 비밀번호 찾기(이메일 전송)
+router.post('/edit/passwordRequest', (req, res) => {
+    let token = req.headers['token'];
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email) {
+            res.status(400).send("invalid request");
+            return;
+        }
+        
+    }).catch((error) => {
+        res.status(403).send("unauthorized request");
+        return;
+    })
+});
 
 // 리뷰
+
 // 회원정보 수정
+router.put('/edit', formidable(), (req, res) => {
+    let token = req.headers['token'];
+
+    const params = {
+        Bucket: 'infogreenmomguide',
+        Key: null,
+        ACL: 'public-read',
+        Body: null
+    };
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email) {
+            res.status(400).send("invalid request");
+            return;
+        }
+        
+        
+
+    }).catch((error) => {
+        res.status(403).send("unauthorized request");
+        return;
+    })
+});
 
 module.exports = router;
