@@ -269,6 +269,65 @@ router.get('/register/checkNickName', (req, res) => {
        }
     })
 });
+
+/*
+    > 비밀번호 확인(프로필 수정 전에 확인)
+    > GET /api/auth/editProfile/checkPassword?password=Ebubu1111
+    > req.query.password에 password 전달
+    > 400: invalid request
+      403: unauthorized request
+      error: {
+        "no info": 해당 회원정보 없음
+        "incorrect password": 비밀번호 일치하지 않음
+      }
+    > true가 리턴되면 비밀번호 일치. 다음 단계로.
+*/
+router.get('/editProfile/checkPassword', (req, res) => {
+    let token = req.headers['token'];
+
+    if (!req.query.password) {
+        res.status(400).send("invalid request");
+    }
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email) {
+            res.status(400).send("invalid request");
+            return;
+        }
+
+        db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email
+            }
+        }).then((result) => {
+            if (!result) {
+                res.json({
+                    error: "no info"
+                })
+            } else {
+                bcrypt.compare(req.query.password, result.password, (err, bcryptResult) => {
+                    if (err) {
+                        console.log(err);
+                    } else {
+                        if (bcryptResult) {
+                            res.json(bcryptResult);
+                        } else {
+                            res.json({
+                                error: "incorrect password"
+                            });
+                        }
+                    }
+                });
+            }
+        });
+        
+    }).catch((error) => {
+        res.status(403).send("unauthorized request");
+        return;
+    })
+});
+
 /*
     > 로그인
     > POST /api/auth/login
@@ -321,7 +380,7 @@ router.post('/login', (req, res) => {
                         });
                     }
                 }
-            })
+            });
         }
     })
 });
@@ -781,7 +840,7 @@ router.get('/info/likeProduct', (req, res) => {
 });
 
 // 비밀번호 찾기(이메일 전송)
-router.post('/edit/passwordRequest', (req, res) => {
+router.post('/editProfile/passwordRequest', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
@@ -798,16 +857,40 @@ router.post('/edit/passwordRequest', (req, res) => {
 
 // 리뷰
 
-// 회원정보 수정
-router.put('/edit', formidable(), (req, res) => {
+/*
+    > 회원정보 수정
+    > PUT /api/auth/editProfile/edit
+    > form data로 데이터 전달. 단, 이메일은 변경 불가이고 비밀번호는 변경 절차가 별도이므로 전달하지 않는다.
+    > 필수정보: nickName(닉네임), gender(성별), memberBirthYear(회원생년), memberBirthMonth(회원생월), memberBirthDay(회원생일),
+      hasChild(자녀여부)
+    > 필수/선택정보(hasChild가 true일 경우엔 필수로 받기. 아니면 받지 않기.): childBirthYear(자식생년), childBirthMonth(자식생월), childBirthDay(자식생일)
+    > 선택정보: name(이름), phoneNum(휴대폰번호 - "-" 빼고 숫자로만 이루어진 string으로), postalCode(우편번호), addressRoad(도로명 주소), addressSpec(상세주소),
+      addressEtc(참고주소)
+    > response로 result: "success"가 return 되면 성공적으로 변경
+    > 400: invalid request
+      403: unauthorized request
+*/
+router.put('/editProfile/edit', formidable(), (req, res) => {
     let token = req.headers['token'];
 
-    const params = {
+    const addParams = {
         Bucket: 'infogreenmomguide',
         Key: null,
         ACL: 'public-read',
         Body: null
     };
+
+    const deleteParams = {
+        Bucket: 'infogreenmomguide',
+        Key: null
+    };
+
+    if (req.fields.email) {
+        res.status(400).send("invalid request");
+        return;
+    }
+
+    const infoObj = {};
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email) {
@@ -815,7 +898,108 @@ router.put('/edit', formidable(), (req, res) => {
             return;
         }
         
-        
+        infoObj.nickName = req.fields.nickName;
+        infoObj.gender = req.fields.gender;
+        infoObj.memberBirthYear = Number(req.fields.memberBirthYear);
+        infoObj.memberBirthMonth = Number(req.fields.memberBirthMonth);
+        infoObj.memberBirthDay = Number(req.fields.memberBirthDay);
+        infoObj.hasChild = req.fields.hasChild === 'true';
+
+        if (infoObj.hasChild === true) {
+            if (!req.fields.childBirthYear || !req.fields.childBirthMonth || !req.fields.childBirthDay) {
+                res.status(400).send("invalid request");
+                return;
+            } else {
+                infoObj.childBirthYear = Number(req.fields.childBirthYear);
+                infoObj.childBirthMonth = Number(req.fields.childBirthMonth);
+                infoObj.childBirthDay = Number(req.fields.childBirthDay);
+            }
+        } else {
+                infoObj.childBirthYear = 0;
+                infoObj.childBirthMonth = 0;
+                infoObj.childBirthDay = 0;
+        }
+
+        if (req.fields.name) {
+            infoObj.name = req.fields.name;
+        }
+
+        if (req.fields.phoneNum) {
+            infoObj.phoneNum = req.fields.phoneNum;
+        }
+
+        if (req.fields.postalCode) {
+            infoObj.postalCode = req.fields.postalCode;
+        }
+
+        if (req.fields.addressRoad) {
+            infoObj.addressRoad = req.fields.addressRoad;
+        }
+
+        if (req.fields.addressSpec) {
+            infoObj.addressSpec = req.fields.addressSpec;
+        }
+
+        if (req.fields.addressEtc) {
+            infoObj.addressEtc = req.fields.addressEtc;
+        }
+
+        if (!(typeof req.files.image === 'undefined')) {
+            addParams.Key = "profile-images/" + token.email + getExtension(req.files.image.name);
+            addParams.Body = require('fs').createReadStream(req.files.image.path);
+        } else {
+            addParams.Key = "NO";
+            addParams.Body = "NO";
+        }
+
+        db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email
+            }
+        }).then((result) => {
+            if (!result) {
+                res.json({
+                    error: "no info"
+                })
+            } else {
+                deleteParams.Key = "profile-images/" + token.email + getExtension(result.dataValues.photoUrl);
+                s3.deleteObject(deleteParams, (err, data) => {
+                    if (err) {
+                        console.log(err);
+                    } else {
+                        s3.putObject(addParams, (err, data) => {
+                            if (err) {
+                                console.log(err)
+                            } else {
+                                if (!(addParams.Key === "NO") && !(addParams.Key === "NO")) {
+                                    infoObj.photoUrl = "https://s3.ap-northeast-2.amazonaws.com/infogreenmomguide/" + addParams.Key;
+                                }
+                                db.MemberInfo.update(
+                                    infoObj,
+                                    {
+                                        where: {
+                                            index: token.index
+                                        }
+                                    }
+                                ).then((result) => {
+                                    if (!result) {
+                                        res.json({
+                                            result: "failed"
+                                        });
+                                    }
+                                    else {
+                                        res.json({
+                                            result: "success"
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                })
+            }
+        });
 
     }).catch((error) => {
         res.status(403).send("unauthorized request");
