@@ -3,18 +3,13 @@ const router = express.Router();
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
 const mailReq = require("superagent");
-
-const db = require("../../models/index");
-
 const bcrypt = require('bcrypt-nodejs');
 const jwt = require('jsonwebtoken');
 const formidable = require('express-formidable');
+const sgMail = require('@sendgrid/mail');
 
+const db = require("../../models/index");
 const config = require('../../config/config');
-
-const mailchimpInstance   = 'us20';
-const listUniqueId        = '654054dea8';
-const mailchimpApiKey     = 'e6efd62eda528273f5473ef9254f8e53-us20';
 
 // function to get extension in filename
 function getExtension(fileName) {
@@ -88,7 +83,7 @@ async function findProduct(prevResult) {
 router.post('/register', formidable(), (req, res) => {
 
     const params = {
-        Bucket: 'infogreenmomguide',
+        Bucket: config.s3Bucket,
         Key: null,
         ACL: 'public-read',
         Body: null
@@ -154,9 +149,9 @@ router.post('/register', formidable(), (req, res) => {
         infoObj.addressEtc = req.fields.addressEtc;
     }
 
-    mailReq.post('https://' + mailchimpInstance + '.api.mailchimp.com/3.0/lists/' + listUniqueId + '/members/')
+    mailReq.post('https://' + config.mailchimpInstance + '.api.mailchimp.com/3.0/lists/' + config.mailchimpListId + '/members/')
         .set('Content-Type', 'application/json;charset=utf-8')
-        .set('Authorization', 'Basic ' + new Buffer('any:' + mailchimpApiKey ).toString('base64'))
+        .set('Authorization', 'Basic ' + new Buffer('any:' + config.mailchimpApiKey ).toString('base64'))
         .send({
           'email_address': infoObj.email,
           'status': (infoObj.mailed) ? 'subscribed' : 'unsubscribed'
@@ -184,7 +179,7 @@ router.post('/register', formidable(), (req, res) => {
                                         console.log(err)
                                     } else {
                                         if (!(params.Key === "NO") && !(params.Key === "NO")) {
-                                            infoObj.photoUrl = "https://s3.ap-northeast-2.amazonaws.com/infogreenmomguide/" + params.Key;
+                                            infoObj.photoUrl = config.s3Url + params.Key;
                                         }
                                         db.MemberInfo.create(
                                             infoObj
@@ -836,11 +831,58 @@ router.get('/info/likeProduct', (req, res) => {
     }).catch((error) => {
         res.status(403).send("unauthorized request");
         return;
+    });
+});
+
+/*
+    > 비밀번호 변경을 위한 이메일 요청
+    > POST /api/auth/editProfile/requestPassword
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
+    > 해당 이메일로 비밀번호 리셋 페이지로 이동하는 URL + 토큰 전달(현재는 임의의 URL을 넣어놓음. 나중에 페이지 만들어지면 연결)
+    > response로 result: "success"가 return 되면 성공적으로 전송
+    > 400: invalid request
+      403: unauthorized access
+*/
+router.post('/editProfile/requestPassword', (req, res) => {
+    let bearerToken = req.headers['token'];
+    originalToken = bearerToken.substring(7);
+
+    sgMail.setApiKey(config.sendgridApiKey);
+
+    decodeToken(bearerToken).then((token) => {
+        if (!token.index || !token.email) {
+            res.status(400).send("invalid request");
+            return;
+        }
+
+        const msg = {
+            to: token.email,
+            from: config.fromEmail,
+            subject: 'Password Reset Verfication Email',
+            text: 'Password Reset',
+            html: '<a href="http://localhost:3000/passwordReset?token=' + originalToken + '">Password Reset</a>',
+        };
+
+        sgMail.send(msg);
+        res.json({
+            result: "success"
+        });
+        
+    }).catch((error) => {
+        res.status(403).send("unauthorized request");
+        return;
     })
 });
 
-// 비밀번호 찾기(이메일 전송)
-router.post('/editProfile/passwordRequest', (req, res) => {
+/*
+    > 비밀번호 변경
+    > PUT /api/auth/editProfile/resetPassword
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 새로운 비밀번호는 req.body.password로 전달
+    > response로 result: "success"가 return 되면 성공적으로 변경
+    > 400: invalid request
+      403: unauthorized access
+*/
+router.put('/editProfile/resetPassword', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
@@ -849,10 +891,42 @@ router.post('/editProfile/passwordRequest', (req, res) => {
             return;
         }
         
+        bcrypt.genSalt(10, (err, salt) => {
+            if (err) {
+                console.log(err);
+            } else {
+                bcrypt.hash(req.body.password, salt, null, (err, hash) => {
+                    if (err) {
+                        console.log(err);
+                    } else {
+    
+                        db.MemberInfo.update({
+                            password: hash
+                        }, 
+                        {
+                            where: {
+                                index: token.index
+                            }
+                        }).then((result) => {
+                            if (!result) {
+                                res.json({
+                                    result: "failed"
+                                });
+                            } else {
+                                res.json({
+                                    result: "success"
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+        
     }).catch((error) => {
         res.status(403).send("unauthorized request");
         return;
-    })
+    });
 });
 
 // 리뷰

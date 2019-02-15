@@ -3,4 +3,10 @@ module.exports = {
     databaseID: 'DATABASE_ID',
     databasePassword: 'DATABASE_PASSWORD',
     jwtSecret: 'JWT_SECRET_KEY'
+    mailchimpInstance: 'MAILCHIMP_INSTANCE',
+    mailchimpListId: 'MAILCHIMP_LISTID',
+    mailchimpApiKey: 'MAILCHIMP_APIKEY',
+    s3Bucket: 'S3_BUCKET_NAME',
+    s3Url: 'S3_BUCKET_URL',
+    sendgridApiKey: 'SENDGRID_APIKEY'
 };
