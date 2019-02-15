@@ -39,6 +39,8 @@ MemberInfo.belongsToMany(MemberInfo, { as: 'followee', foreignKey: 'follower', t
 const MemberToHome = require('./MemberToHome')(sequelize, Sequelize);
 const MemberToLike = require('./MemberToLike')(sequelize, Sequelize);
 
+const MemberToOpenRequest = require('./MemberToOpenRequest')(sequelize, Sequelize);
+
 module.exports = {
     CosmeticIngredient,
     CosmeticDB,
@@ -47,5 +49,6 @@ module.exports = {
     MemberInfo,
     MemberToHome,
     MemberToLike,
+    MemberToOpenRequest,
     sequelize
 };

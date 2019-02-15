@@ -79,6 +79,15 @@ async function findProduct(prevResult) {
       addressEtc(참고주소)
     > 400: invalid request
       412: precondition unsatisfied
+      error: {
+          "salt generation failed": 솔트 생성 실패
+          "hash generation failed": 해쉬 생성 실패
+          "s3 store failed": s3 버켓 안에 이미지 저장 실패
+          "member creation failed": db안에 회원정보 생성 실패
+      }
+    > result: {
+        db안에 생성된 회원정보가 전달
+    }
 */
 router.post('/register', formidable(), (req, res) => {
 
@@ -159,11 +168,15 @@ router.post('/register', formidable(), (req, res) => {
             if (response.status < 300 || (response.status === 400 && response.body.title === "Member Exists")) {
                 bcrypt.genSalt(10, (err, salt) => {
                     if (err) {
-                        console.log(err);
+                        res.json({
+                            error: "salt generation failed"
+                        })
                     } else {
                         bcrypt.hash(req.fields.password, salt, null, (err, hash) => {
                             if (err) {
-                                console.log(err);
+                                res.json({
+                                    error: "hash generation failed"
+                                })
                             } else {
                                 infoObj.password = hash;
             
@@ -176,7 +189,9 @@ router.post('/register', formidable(), (req, res) => {
                                 }
                                 s3.putObject(params, function(err, data) {
                                     if (err) {
-                                        console.log(err)
+                                        res.json({
+                                            error: "s3 store failed"
+                                        });
                                     } else {
                                         if (!(params.Key === "NO") && !(params.Key === "NO")) {
                                             infoObj.photoUrl = config.s3Url + params.Key;
@@ -185,7 +200,9 @@ router.post('/register', formidable(), (req, res) => {
                                             infoObj
                                         ).done(function(err, result) {
                                             if (err) {
-                                                res.json(err);
+                                                res.json({
+                                                    error: "member creation failed"
+                                                });
                                             }
                                             else {
                                                 res.json(result);
@@ -210,6 +227,8 @@ router.post('/register', formidable(), (req, res) => {
     > 400: invalid request
       isDuplicated: {
         true: 중복된 이메일이 존재
+      }
+    > isDuplicated: {
         false: 중복된 이메일이 존재하지 않음
       }
 */
@@ -241,6 +260,8 @@ router.get('/register/checkEmail', (req, res) => {
     > 400: invalid request
       isDuplicated: {
         true: 중복된 닉네임이 존재
+      }
+    > isDuplicated: {
         false: 중복된 닉네임이 존재하지 않음
       }
 */
@@ -275,7 +296,9 @@ router.get('/register/checkNickName', (req, res) => {
         "no info": 해당 회원정보 없음
         "incorrect password": 비밀번호 일치하지 않음
       }
-    > true가 리턴되면 비밀번호 일치. 다음 단계로.
+    > success: {
+          true: 성공적으로 완료. 다음 단계로.
+      }
 */
 router.get('/editProfile/checkPassword', (req, res) => {
     let token = req.headers['token'];
@@ -306,7 +329,9 @@ router.get('/editProfile/checkPassword', (req, res) => {
                         console.log(err);
                     } else {
                         if (bcryptResult) {
-                            res.json(bcryptResult);
+                            res.json({
+                                success: bcryptResult
+                            });
                         } else {
                             res.json({
                                 error: "incorrect password"
@@ -326,12 +351,15 @@ router.get('/editProfile/checkPassword', (req, res) => {
 /*
     > 로그인
     > POST /api/auth/login
-    > json 형태로 req.body.email과 req.body.password를 받음
-    > json 안의 tokenData로 토큰을 전달
+    > req.body.email과 req.body.password에 각각 이메일과 비밀번호 전달
     > 400: invalid request
       error: {
           "no member": 해당 email이 디비에 없음. 회원가입이 되어 있지 않은 이메일
+          "hash comparison failed": 해쉬 비교 과정에서 문제 발생
           "incorrect password": 해당 password의 해시와 디비에 저장된 해시가 일치하지 않음. 잘못된 비밀번호
+      }
+    > token: {
+        token (token value를 전달)
       }
 */
 router.post('/login', (req, res) => {
@@ -353,7 +381,9 @@ router.post('/login', (req, res) => {
         } else { 
             bcrypt.compare(req.body.password, result.password, (err, bcryptResult) => {
                 if (err) {
-                    console.log(err);
+                    res.json({
+                        error: "hash comparison failed"
+                    });
                 } else {
                     if (bcryptResult) {
                         const payload = {
@@ -384,12 +414,14 @@ router.post('/login', (req, res) => {
 /*
     > 회원정보 가져오기(팔로잉/팔로우는 추후에)
     > GET /api/auth/info
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것
-    > db의 row가 json으로 넘어오니 필요한 정보를 받아 사용
+    > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것
     > 400: invalid request
       403: unauthorized access
       error: {
           "no info": 해당하는 정보의 유저가 없음(사실 로그인을 했다면 당연히 있겠지만)
+      }
+    > {
+        해당 회원의 정보
       }
 */
 router.get('/info', (req, res) => {
@@ -429,10 +461,15 @@ router.get('/info', (req, res) => {
 /*
     > 우리집 화장품 등록
     > POST /api/auth/addHomeCosmetic
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > mainCategory: true
+    > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
     > 400: invalid request
       403: unauthorized access
+      error: {
+          "product add failed": db에 해당 제품을 추가하는데에 문제 발생
+      }
+    > success: {
+        true: 성공적으로 등록
+      }
 */
 router.post('/addHomeCosmetic', (req, res) => {
     let token = req.headers['token'];
@@ -449,27 +486,35 @@ router.post('/addHomeCosmetic', (req, res) => {
             isCosmetic: true
         }).done((err, result) => {
             if (err) {
-                res.json(err);
+                res.json({
+                    error: "product add failed"
+                });
             }
             else {
-                res.json(result);
+                res.json({
+                    success: true
+                });
             }
         });
 
     }).catch((error) => {
-        console.log(error);
         res.status(403).send("unauthorized request");
         return;
     });
 });
 
 /*
-    > 우리집 생활화학제품 등록 
+    > 우리집 생활화확제품 등록
     > POST /api/auth/addHomeLiving
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isCosmetic: true로 전달
+    > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
     > 400: invalid request
       403: unauthorized access
+      error: {
+          "product add failed": db에 해당 제품을 추가하는데에 문제 발생
+      }
+    > success: {
+        true: 성공적으로 등록
+      }
 */
 router.post('/addHomeLiving', (req, res) => {
     let token = req.headers['token'];
@@ -486,10 +531,14 @@ router.post('/addHomeLiving', (req, res) => {
             isCosmetic: false
         }).done((err, result) => {
             if (err) {
-                res.json(err);
+                res.json({
+                    error: "product add failed"
+                });
             }
             else {
-                res.json(result);
+                res.json({
+                    success: true
+                });
             }
         });
 
@@ -501,14 +550,16 @@ router.post('/addHomeLiving', (req, res) => {
 
 
 /*
-    > 우리집 화장품 취소 
+    > 우리집 화장품 취소
     > DELETE /api/auth/cancelHomeCosmetic
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isCosmetic: true로 전달
+    > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
     > 400: invalid request
       403: unauthorized access
       error: {
-          "no info": 해당하는 정보의 유저가 없음(사실 로그인을 했다면 당연히 있겠지만)
+          "no such product": db에 해당 제품이 없어서 삭제 실패
+      }
+    > success: {
+        true: 성공적으로 삭제
       }
 */
 router.delete('/cancelHomeCosmetic', (req, res) => {
@@ -529,11 +580,13 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
         }).then((result) => {
             if (!result) {
                 res.json({
-                    error: "no info"
+                    error: "no such product"
                 })
             }
             else {
-                res.json(result);
+                res.json({
+                    success: true
+                });
             }
         });
 
@@ -545,14 +598,16 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
 
 
 /*
-    > 우리집 생활화학제품 취소 
-    > POST /api/auth/cancelHomeLiving
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isCosmetic: false로 전달
+    > 우리집 생활화학제품 취소
+    > DELETE /api/auth/cancelHomeLiving
+    > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
     > 400: invalid request
       403: unauthorized access
       error: {
-          "no info": 해당하는 정보의 유저가 없음(사실 로그인을 했다면 당연히 있겠지만)
+          "no such product": db에 해당 제품이 없어서 삭제 실패
+      }
+    > success: {
+        true: 성공적으로 삭제
       }
 */
 router.delete('/cancelHomeLiving', (req, res) => {
@@ -573,11 +628,13 @@ router.delete('/cancelHomeLiving', (req, res) => {
         }).then((result) => {
             if (!result) {
                 res.json({
-                    error: "no info"
+                    error: "no such product"
                 })
             }
             else {
-                res.json(result);
+                res.json({
+                    success: true
+                });
             }
         });
 
@@ -591,10 +648,15 @@ router.delete('/cancelHomeLiving', (req, res) => {
 /*
     > 찜 화장품 등록
     > POST /api/auth/addLikeCosmetic
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isCosmetic: true로 등록
+    > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
     > 400: invalid request
       403: unauthorized access
+      error: {
+          "product add failed": db에 해당 제품을 추가하는데에 문제 발생
+      }
+    > success: {
+        true: 성공적으로 등록
+      }
 */
 router.post('/addLikeCosmetic', (req, res) => {
     let token = req.headers['token'];
@@ -611,10 +673,14 @@ router.post('/addLikeCosmetic', (req, res) => {
             isCosmetic: true
         }).done((err, result) => {
             if (err) {
-                res.json(err);
+                res.json({
+                    error: "product add failed"
+                });
             }
             else {
-                res.json(result);
+                res.json({
+                    success: true
+                });
             }
         });
 
@@ -625,12 +691,17 @@ router.post('/addLikeCosmetic', (req, res) => {
 });
 
 /*
-    > 찜 생활화학제품 등록 
+    > 찜 생활화학제품 등록
     > POST /api/auth/addLikeLiving
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isCosmetic: false로 전달
+    > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
     > 400: invalid request
       403: unauthorized access
+      error: {
+          "product add failed": db에 해당 제품을 추가하는데에 문제 발생
+      }
+    > success: {
+        true: 성공적으로 등록
+      }
 */
 router.post('/addLikeLiving', (req, res) => {
     let token = req.headers['token'];
@@ -647,10 +718,14 @@ router.post('/addLikeLiving', (req, res) => {
             isCosmetic: false
         }).done((err, result) => {
             if (err) {
-                res.json(err);
+                res.json({
+                    error: "product add failed"
+                });
             }
             else {
-                res.json(result);
+                res.json({
+                    success: true
+                });
             }
         });
 
@@ -662,14 +737,16 @@ router.post('/addLikeLiving', (req, res) => {
 
 
 /*
-    > 찜 화장품 취소 
+    > 찜 화장품 취소
     > DELETE /api/auth/cancelLikeCosmetic
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isCosmetic: true로 전달
+    > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
     > 400: invalid request
       403: unauthorized access
       error: {
-          "no info": 해당하는 정보의 유저가 없음(사실 로그인을 했다면 당연히 있겠지만)
+          "no such product": db에 해당 제품이 없어서 삭제 실패
+      }
+    > success: {
+        true: 성공적으로 삭제
       }
 */
 router.delete('/cancelLikeCosmetic', (req, res) => {
@@ -690,11 +767,13 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
         }).then((result) => {
             if (!result) {
                 res.json({
-                    error: "no info"
+                    error: "no such product"
                 })
             }
             else {
-                res.json(result);
+                res.json({
+                    success: true
+                });
             }
         });
 
@@ -706,14 +785,16 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
 
 
 /*
-    > 찜 생활화학제품 취소 
+    > 찜 생활화학제품 취소
     > DELETE /api/auth/cancelLikeLiving
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 클릭한 제품의 index를 req.body로 전달
-    > isCosmetic: false로 전달
+    > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
     > 400: invalid request
       403: unauthorized access
       error: {
-          "no info": 해당하는 정보의 유저가 없음(사실 로그인을 했다면 당연히 있겠지만)
+          "no such product": db에 해당 제품이 없어서 삭제 실패
+      }
+    > success: {
+        true: 성공적으로 삭제
       }
 */
 router.delete('/cancelLikeLiving', (req, res) => {
@@ -734,11 +815,13 @@ router.delete('/cancelLikeLiving', (req, res) => {
         }).then((result) => {
             if (!result) {
                 res.json({
-                    error: "no info"
+                    error: "no such product"
                 })
             }
             else {
-                res.json(result);
+                res.json({
+                    success: true
+                });
             }
         });
 
@@ -758,14 +841,15 @@ router.delete('/cancelLikeLiving', (req, res) => {
 
 /*
     > 우리집 화학제품 불러오기 
-    > get /api/auth/info/homeProduct
+    > GET /api/auth/info/homeProduct
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
-    > 결과를 두 배열을 가지고 있는 배열 하나로 전달. 첫번째 배열은 화장품, 두번째 배열은 화학제품. 각 배열에 해당 제품들의 정보 객체들이 있음.
     > 400: invalid request
       403: unauthorized access
-      error: {
-          "no info": 해당하는 정보의 유저가 없음(사실 로그인을 했다면 당연히 있겠지만)
-      }
+      []: 빈 배열. 검색 결과 없음.
+    > [
+        []
+        [] : 두 배열을 가진 배열로 리턴. 1번째 배열은 화장품, 2번째 배열은 생활화학제품들의 객체로 이루어짐.
+      ]
 */
 router.get('/info/homeProduct', (req, res) => {
     let token = req.headers['token'];
@@ -796,15 +880,16 @@ router.get('/info/homeProduct', (req, res) => {
 });
 
 /*
-    > 찜한 제품 불러오기 
-    > get /api/auth/info/likeProduct
+    > 찜 화학제품 불러오기 
+    > GET /api/auth/info/likeProduct
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
-    > 결과를 두 배열을 가지고 있는 배열 하나로 전달. 첫번째 배열은 화장품, 두번째 배열은 화학제품. 각 배열에 해당 제품들의 정보 객체들이 있음.
     > 400: invalid request
       403: unauthorized access
-      error: {
-          "no info": 해당하는 정보의 유저가 없음(사실 로그인을 했다면 당연히 있겠지만)
-      }
+      []: 빈 배열. 검색 결과 없음.
+    > [
+        []
+        [] : 두 배열을 가진 배열로 리턴. 1번째 배열은 화장품, 2번째 배열은 생활화학제품들의 객체로 이루어짐.
+      ]
 */
 router.get('/info/likeProduct', (req, res) => {
     let token = req.headers['token'];
@@ -837,11 +922,16 @@ router.get('/info/likeProduct', (req, res) => {
 /*
     > 비밀번호 변경을 위한 이메일 요청
     > POST /api/auth/editProfile/requestPassword
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
-    > 해당 이메일로 비밀번호 리셋 페이지로 이동하는 URL + 토큰 전달(현재는 임의의 URL을 넣어놓음. 나중에 페이지 만들어지면 연결)
-    > response로 result: "success"가 return 되면 성공적으로 전송
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.email로 email 전달.
     > 400: invalid request
       403: unauthorized access
+      error: {
+          "incorrect email": 적절하지 않은 이메일(가입시 입력한 이메일과 다름)
+      }
+    > success: {
+        true: 성공적으로 이메일 전송
+      }
+    > 이메일에는 비밀번호 재설정 페이지 URL + 토큰이 전달됨. (현재는 임의의 URL을 넣어놓음. 추후에 변경 예정.)
 */
 router.post('/editProfile/requestPassword', (req, res) => {
     let bearerToken = req.headers['token'];
@@ -855,18 +945,24 @@ router.post('/editProfile/requestPassword', (req, res) => {
             return;
         }
 
-        const msg = {
-            to: token.email,
-            from: config.fromEmail,
-            subject: 'Password Reset Verfication Email',
-            text: 'Password Reset',
-            html: '<a href="http://localhost:3000/passwordReset?token=' + originalToken + '">Password Reset</a>',
-        };
-
-        sgMail.send(msg);
-        res.json({
-            result: "success"
-        });
+        if (req.body.email === token.email) {
+            const msg = {
+                to: token.email,
+                from: config.fromEmail,
+                subject: 'Password Reset Verfication Email',
+                text: 'Password Reset',
+                html: '<a href="http://localhost:3000/passwordReset?token=' + originalToken + '">Password Reset</a>',
+            };
+    
+            sgMail.send(msg);
+            res.json({
+                success: true
+            });
+        } else {
+            res.json({
+                error: "incorrect email"
+            });
+        }
         
     }).catch((error) => {
         res.status(403).send("unauthorized request");
@@ -877,10 +973,17 @@ router.post('/editProfile/requestPassword', (req, res) => {
 /*
     > 비밀번호 변경
     > PUT /api/auth/editProfile/resetPassword
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 새로운 비밀번호는 req.body.password로 전달
-    > response로 result: "success"가 return 되면 성공적으로 변경
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.password로 새로운 비밀번호 전달
     > 400: invalid request
       403: unauthorized access
+      error: {
+        "salt generation failed": 솔트 생성 실패
+        "hash generation failed": 해쉬 생성 실패
+        "update failed": db에 있는 정보 변경 실패
+      }
+    > success: {
+        true: 성공적으로 변경
+      }
 */
 router.put('/editProfile/resetPassword', (req, res) => {
     let token = req.headers['token'];
@@ -893,11 +996,15 @@ router.put('/editProfile/resetPassword', (req, res) => {
         
         bcrypt.genSalt(10, (err, salt) => {
             if (err) {
-                console.log(err);
+                res.json({
+                    error: "salt generation failed"
+                })
             } else {
                 bcrypt.hash(req.body.password, salt, null, (err, hash) => {
                     if (err) {
-                        console.log(err);
+                        res.json({
+                            error: "hash generation failed"
+                        })
                     } else {
     
                         db.MemberInfo.update({
@@ -910,11 +1017,11 @@ router.put('/editProfile/resetPassword', (req, res) => {
                         }).then((result) => {
                             if (!result) {
                                 res.json({
-                                    result: "failed"
+                                    error: "update failed"
                                 });
                             } else {
                                 res.json({
-                                    result: "success"
+                                    success: true
                                 });
                             }
                         });
@@ -940,9 +1047,17 @@ router.put('/editProfile/resetPassword', (req, res) => {
     > 필수/선택정보(hasChild가 true일 경우엔 필수로 받기. 아니면 받지 않기.): childBirthYear(자식생년), childBirthMonth(자식생월), childBirthDay(자식생일)
     > 선택정보: name(이름), phoneNum(휴대폰번호 - "-" 빼고 숫자로만 이루어진 string으로), postalCode(우편번호), addressRoad(도로명 주소), addressSpec(상세주소),
       addressEtc(참고주소)
-    > response로 result: "success"가 return 되면 성공적으로 변경
     > 400: invalid request
       403: unauthorized request
+      error: {
+          "no info": 회원정보 없음
+          "s3 delete failed": s3 버켓 안에 있는 기존 프로필 사진 변경 실패
+          "s3 store failed": s3 버켓에 이미지 저장 실패
+          "update failed": db 안에 있는 회원정보 변경 실패
+      }
+    > success: {
+        true: 성공적으로 회원정보 변경
+      }
 */
 router.put('/editProfile/edit', formidable(), (req, res) => {
     let token = req.headers['token'];
@@ -1040,11 +1155,15 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                 deleteParams.Key = "profile-images/" + token.email + getExtension(result.dataValues.photoUrl);
                 s3.deleteObject(deleteParams, (err, data) => {
                     if (err) {
-                        console.log(err);
+                        res.json({
+                            error: "s3 delete failed"
+                        });
                     } else {
                         s3.putObject(addParams, (err, data) => {
                             if (err) {
-                                console.log(err)
+                                res.json({
+                                    error: "s3 store failed"
+                                });
                             } else {
                                 if (!(addParams.Key === "NO") && !(addParams.Key === "NO")) {
                                     infoObj.photoUrl = "https://s3.ap-northeast-2.amazonaws.com/infogreenmomguide/" + addParams.Key;
@@ -1059,12 +1178,12 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                                 ).then((result) => {
                                     if (!result) {
                                         res.json({
-                                            result: "failed"
+                                            error: "update failed"
                                         });
                                     }
                                     else {
                                         res.json({
-                                            result: "success"
+                                            success: true
                                         });
                                     }
                                 });
@@ -1080,5 +1199,134 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
         return;
     })
 });
+
+/*
+    > 성분 공개 요청
+    > POST /api/auth/requestIngredOpen
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달
+    > 400: invalid request
+      403: unauthorized access
+      error: {
+          "no product": 해당 제품 없음
+          "already open": 이미 성분 공개된 제품
+          "product add failed": db에 해당 제품 등록 실패
+      }
+    > success: {
+        true: 성공적으로 등록
+      }
+*/
+router.post('/requestIngredOpen', (req, res) => {
+    let token = req.headers['token'];
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !req.body.productIndex) {
+            res.status(400).send("invalid request");
+            return;
+        }
+
+        db.LivingDB.findOne({
+            where: {
+                index: req.body.productIndex
+            }
+        }).then((result) => {
+            if (!result) {
+                res.json({
+                    error: "no product"
+                })
+            } else {
+                if (result.dataValues.ingredient === 'O') {
+                    res.json({
+                        error: "already open"
+                    })
+                } else {
+                    db.MemberToOpenRequest.create({
+                        memberIndex: token.index,
+                        productIndex: req.body.productIndex,
+                    }).done((err, result) => {
+                        if (err) {
+                            res.json({
+                                error: "product add failed"
+                            });
+                        }
+                        else {
+                            res.json({
+                                success: true
+                            });
+                        }
+                    });
+                }
+            }
+        });
+
+    }).catch((error) => {
+        res.status(403).send("unauthorized request");
+        return;
+    });
+});
+
+/*
+    > 성분 공개 완료 후 요청 목록에서 삭제(이것은 유저가 하는것이 아니라 추후에 admin 계정이 있을 때 admin 권한으로 삭제하는것. 지금은 일단 아무 유저나 삭제 가능.)
+    > POST /api/auth/ingredOpenRequest
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달
+    > 400: invalid request
+      403: unauthorized access
+      error: {
+          "no product": 해당 제품 없이 없어 삭제 불가
+          "update failure": 해당 제품의 상태를 성분 공개 상태로 바꾸는 데에 실패
+      }
+    > success: {
+        true: 성공적으로 변경
+      }
+*/
+router.delete('/cancelIngredOpen', (req, res) => {
+    let token = req.headers['token'];
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !req.body.productIndex) {
+            res.status(400).send("invalid request");
+            return;
+        }
+
+        // token.index가 admin의 index인지 확인하는 작업 필요!
+
+        db.MemberToOpenRequest.destroy({
+            where: {
+                productIndex: req.body.productIndex,
+            }
+        }).then((result) => {
+            if (!result) {
+                res.json({
+                    error: "no product"
+                })
+            }
+            else {
+                db.LivingDB.update({
+                    ingredient: 'O'
+                },
+                {
+                    where: {
+                        index: req.body.productIndex
+                    }
+                }).then((result) => {
+                    if (!result) {
+                        res.json({
+                            error: "update failure"
+                        })
+                    } else {
+                        res.json({
+                            success: true
+                        });
+                    }
+                });
+            }
+        });
+
+    }).catch((error) => {
+        res.status(403).send("unauthorized request");
+        return;
+    });
+});
+
+// 성분 공개 요청 제품 목록
 
 module.exports = router;
