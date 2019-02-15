@@ -198,8 +198,8 @@ router.post('/register', formidable(), (req, res) => {
                                         }
                                         db.MemberInfo.create(
                                             infoObj
-                                        ).done(function(err, result) {
-                                            if (err) {
+                                        ).done((result) => {
+                                            if (!result) {
                                                 res.json({
                                                     error: "member creation failed"
                                                 });
@@ -841,7 +841,7 @@ router.delete('/cancelLikeLiving', (req, res) => {
 
 /*
     > 우리집 화학제품 불러오기 
-    > GET /api/auth/info/homeProduct
+    > GET /api/auth/homeProduct
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
     > 400: invalid request
       403: unauthorized access
@@ -851,7 +851,7 @@ router.delete('/cancelLikeLiving', (req, res) => {
         [] : 두 배열을 가진 배열로 리턴. 1번째 배열은 화장품, 2번째 배열은 생활화학제품들의 객체로 이루어짐.
       ]
 */
-router.get('/info/homeProduct', (req, res) => {
+router.get('/homeProduct', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
@@ -881,7 +881,7 @@ router.get('/info/homeProduct', (req, res) => {
 
 /*
     > 찜 화학제품 불러오기 
-    > GET /api/auth/info/likeProduct
+    > GET /api/auth/likeProduct
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
     > 400: invalid request
       403: unauthorized access
@@ -891,7 +891,7 @@ router.get('/info/homeProduct', (req, res) => {
         [] : 두 배열을 가진 배열로 리턴. 1번째 배열은 화장품, 2번째 배열은 생활화학제품들의 객체로 이루어짐.
       ]
 */
-router.get('/info/likeProduct', (req, res) => {
+router.get('/likeProduct', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
@@ -920,54 +920,58 @@ router.get('/info/likeProduct', (req, res) => {
 });
 
 /*
-    > 비밀번호 변경을 위한 이메일 요청
+    > 비밀번호 변경을 위한 이메일 요청(로그인을 못 했을 시)
     > POST /api/auth/editProfile/requestPassword
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.email로 email 전달.
+    > req.body.email로 email 전달.
     > 400: invalid request
       403: unauthorized access
       error: {
           "incorrect email": 적절하지 않은 이메일(가입시 입력한 이메일과 다름)
       }
-    > success: {
-        true: 성공적으로 이메일 전송
+    > token: {
+        token: 별도로 생성된 토큰 value가 전달되면 성공.
       }
-    > 이메일에는 비밀번호 재설정 페이지 URL + 토큰이 전달됨. (현재는 임의의 URL을 넣어놓음. 추후에 변경 예정.)
+    > 이메일에는 비밀번호 재설정 페이지 URL + ?토큰이 전달됨. (현재는 임의의 URL을 넣어놓음. 추후에 변경 예정.)
+      response로 전달되는 token과 동일하므로 해당 URL로 연결.
 */
-router.post('/editProfile/requestPassword', (req, res) => {
-    let bearerToken = req.headers['token'];
-    originalToken = bearerToken.substring(7);
+router.post('/requestPassword', (req, res) => {
 
     sgMail.setApiKey(config.sendgridApiKey);
 
-    decodeToken(bearerToken).then((token) => {
-        if (!token.index || !token.email) {
-            res.status(400).send("invalid request");
-            return;
+    db.MemberInfo.findOne({
+        where: {
+            email: req.body.email
         }
+    }).then((result) => {
+        if (!result) {
+            res.json({
+                error: "incorrect email"
+            });
+        } else {
+            
+            const payload = {
+                index: result.index,
+                email: result.email,
+              };
+            const jwtSecret = config.jwtSecret;
+            const options = {expiresIn: 60*60*24};
+            
+            const token = jwt.sign(payload, jwtSecret, options);
 
-        if (req.body.email === token.email) {
             const msg = {
-                to: token.email,
+                to: req.body.email,
                 from: config.fromEmail,
                 subject: 'Password Reset Verfication Email',
                 text: 'Password Reset',
-                html: '<a href="http://localhost:3000/passwordReset?token=' + originalToken + '">Password Reset</a>',
+                html: '<a href="http://localhost:3000/passwordReset?token=' + token + '">Password Reset</a>',
             };
     
             sgMail.send(msg);
             res.json({
-                success: true
-            });
-        } else {
-            res.json({
-                error: "incorrect email"
+                token: token
             });
         }
-        
-    }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
-    })
+    });
 });
 
 /*
@@ -1328,5 +1332,31 @@ router.delete('/cancelIngredOpen', (req, res) => {
 });
 
 // 성분 공개 요청 제품 목록
+router.get('/ingredOpen', (req, res) => {
+    let token = req.headers['token'];
 
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !req.body.productIndex) {
+            res.status(400).send("invalid request");
+            return;
+        }
+
+        // db.MemberT.findAll({
+        //     where: {
+        //         memberIndex: token.index
+        //     }
+        // }).then((result) => {
+        //     if (!result) {
+        //         res.json([]);
+        //     } else {
+        //         findProduct(result).then((finalResult) => {
+        //             res.json(finalResult);
+        //         });
+        //     }
+        // });
+    }).catch((error) => {
+        res.status(403).send("unauthorized request");
+        return;
+    });
+});
 module.exports = router;
