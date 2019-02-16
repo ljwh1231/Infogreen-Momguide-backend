@@ -484,8 +484,8 @@ router.post('/addHomeCosmetic', (req, res) => {
             memberIndex: token.index,
             productIndex: req.body.productIndex,
             isCosmetic: true
-        }).done((err, result) => {
-            if (err) {
+        }).done((result) => {
+            if (!result) {
                 res.json({
                     error: "product add failed"
                 });
@@ -529,8 +529,8 @@ router.post('/addHomeLiving', (req, res) => {
             memberIndex: token.index,
             productIndex: req.body.productIndex,
             isCosmetic: false
-        }).done((err, result) => {
-            if (err) {
+        }).done((result) => {
+            if (!result) {
                 res.json({
                     error: "product add failed"
                 });
@@ -671,8 +671,8 @@ router.post('/addLikeCosmetic', (req, res) => {
             memberIndex: token.index,
             productIndex: req.body.productIndex,
             isCosmetic: true
-        }).done((err, result) => {
-            if (err) {
+        }).done((result) => {
+            if (!result) {
                 res.json({
                     error: "product add failed"
                 });
@@ -716,8 +716,8 @@ router.post('/addLikeLiving', (req, res) => {
             memberIndex: token.index,
             productIndex: req.body.productIndex,
             isCosmetic: false
-        }).done((err, result) => {
-            if (err) {
+        }).done((result) => {
+            if (!result) {
                 res.json({
                     error: "product add failed"
                 });
@@ -1246,8 +1246,8 @@ router.post('/requestIngredOpen', (req, res) => {
                     db.MemberToOpenRequest.create({
                         memberIndex: token.index,
                         productIndex: req.body.productIndex,
-                    }).done((err, result) => {
-                        if (err) {
+                    }).done((result) => {
+                        if (!result) {
                             res.json({
                                 error: "product add failed"
                             });
@@ -1270,7 +1270,7 @@ router.post('/requestIngredOpen', (req, res) => {
 
 /*
     > 성분 공개 완료 후 요청 목록에서 삭제(이것은 유저가 하는것이 아니라 추후에 admin 계정이 있을 때 admin 권한으로 삭제하는것. 지금은 일단 아무 유저나 삭제 가능.)
-    > POST /api/auth/ingredOpenRequest
+    > POST /api/auth/cancelIngredOpen
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달
     > 400: invalid request
       403: unauthorized access
@@ -1331,29 +1331,44 @@ router.delete('/cancelIngredOpen', (req, res) => {
     });
 });
 
-// 성분 공개 요청 제품 목록
+/*
+    > 성분 공개 요청한 제품들 목록 받아오기
+    > GET /api/auth/ingredOpen
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
+    > 400: invalid request
+      403: unauthorized access
+    > [
+        결과를 배열로 전달
+      ]
+*/
 router.get('/ingredOpen', (req, res) => {
     let token = req.headers['token'];
+    let finalResult = [];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.productIndex) {
+        if (!token.index || !token.email) {
             res.status(400).send("invalid request");
             return;
         }
 
-        // db.MemberT.findAll({
-        //     where: {
-        //         memberIndex: token.index
-        //     }
-        // }).then((result) => {
-        //     if (!result) {
-        //         res.json([]);
-        //     } else {
-        //         findProduct(result).then((finalResult) => {
-        //             res.json(finalResult);
-        //         });
-        //     }
-        // });
+        db.MemberToOpenRequest.findAll({
+            where: {
+                memberIndex: token.index
+            }
+        }).then(async (result) => {
+            for (let i=0; i<result.length; ++i) {
+                await db.LivingDB.findOne({
+                    where: {
+                        index: result[i].dataValues.productIndex
+                    }
+                }).then((resultFound) => {
+                    finalResult.push(resultFound.dataValues);
+                });
+            }
+
+            res.json(finalResult);
+        });
+
     }).catch((error) => {
         res.status(403).send("unauthorized request");
         return;
