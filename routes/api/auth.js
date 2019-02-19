@@ -68,6 +68,23 @@ async function findProduct(prevResult) {
     return returnArray;
 }
 
+// async function to find the number of s3 bucket
+async function countFiles(folderName) {
+    const params = {
+        Bucket: config.s3Bucket, 
+        Prefix: folderName
+    };
+    await s3.listObjectsV2(params, (err, result) => {
+        if (err) {
+            res.status(424).json({
+                error: "s3 count failed"
+            })
+        } else {
+            return result.KeyCount;
+        }
+    });
+}
+
 /*
     > 회원가입
     > POST /api/auth/register
@@ -104,14 +121,18 @@ router.post('/register', formidable(), (req, res) => {
             || !req.fields.gender || !req.fields.memberBirthYear || !req.fields.memberBirthMonth
             || !req.fields.memberBirthDay || !req.fields.hasChild || !req.fields.mailed) {
             
-        res.status(400).send("invalid request");
+        res.status(400).json({
+            error: "invalid request"
+        });
         return;
     }
 
     infoObj.email = req.fields.email;
 
     if (req.fields.password.length > 15 || req.fields.password.length < 6) {
-        res.status(412).send("precondition unsatisfied");
+        res.status(412).json({
+            error: "precondition unsatisfied"
+        });
         return;
     }
 
@@ -125,7 +146,9 @@ router.post('/register', formidable(), (req, res) => {
 
     if (infoObj.hasChild === true) {
         if (!req.fields.childBirthYear || !req.fields.childBirthMonth || !req.fields.childBirthDay) {
-            res.status(400).send("invalid request");
+            res.status(400).json({
+                error: "invalid request"
+            });
             return;
         } else {
             infoObj.childBirthYear = Number(req.fields.childBirthYear);
@@ -168,13 +191,13 @@ router.post('/register', formidable(), (req, res) => {
             if (response.status < 300 || (response.status === 400 && response.body.title === "Member Exists")) {
                 bcrypt.genSalt(10, (err, salt) => {
                     if (err) {
-                        res.json({
+                        res.status(424).json({
                             error: "salt generation failed"
                         })
                     } else {
                         bcrypt.hash(req.fields.password, salt, null, (err, hash) => {
                             if (err) {
-                                res.json({
+                                res.status(424).json({
                                     error: "hash generation failed"
                                 })
                             } else {
@@ -189,7 +212,7 @@ router.post('/register', formidable(), (req, res) => {
                                 }
                                 s3.putObject(params, function(err, data) {
                                     if (err) {
-                                        res.json({
+                                        res.status(424).json({
                                             error: "s3 store failed"
                                         });
                                     } else {
@@ -200,7 +223,7 @@ router.post('/register', formidable(), (req, res) => {
                                             infoObj
                                         ).done((result) => {
                                             if (!result) {
-                                                res.json({
+                                                res.status(424).json({
                                                     error: "member creation failed"
                                                 });
                                             }
@@ -321,7 +344,7 @@ router.get('/editProfile/checkPassword', (req, res) => {
             }
         }).then((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "no info"
                 })
             } else {
@@ -334,7 +357,7 @@ router.get('/editProfile/checkPassword', (req, res) => {
                                 success: bcryptResult
                             });
                         } else {
-                            res.json({
+                            res.status(403).json({
                                 error: "incorrect password"
                             });
                         }
@@ -376,13 +399,13 @@ router.post('/login', (req, res) => {
         }
     }).then((result) => {
         if (!result) {
-            res.json({
+            res.status(424).json({
                 error: "no member"
             });
         } else { 
             bcrypt.compare(req.body.password, result.password, (err, bcryptResult) => {
                 if (err) {
-                    res.json({
+                    res.status(424).json({
                         error: "hash comparison failed"
                     });
                 } else {
@@ -402,7 +425,7 @@ router.post('/login', (req, res) => {
                         });
 
                     } else {
-                        res.json({
+                        res.status(403).json({
                             error: "incorrect password"
                         });
                     }
@@ -443,7 +466,7 @@ router.get('/info', (req, res) => {
             },
         }).then((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "no info"
                 });
             } else {
@@ -489,7 +512,7 @@ router.post('/addHomeCosmetic', (req, res) => {
             isCosmetic: true
         }).done((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "product add failed"
                 });
             }
@@ -534,7 +557,7 @@ router.post('/addHomeLiving', (req, res) => {
             isCosmetic: false
         }).done((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "product add failed"
                 });
             }
@@ -582,7 +605,7 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
             }
         }).then((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "no such product"
                 })
             }
@@ -630,7 +653,7 @@ router.delete('/cancelHomeLiving', (req, res) => {
             }
         }).then((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "no such product"
                 })
             }
@@ -676,7 +699,7 @@ router.post('/addLikeCosmetic', (req, res) => {
             isCosmetic: true
         }).done((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "product add failed"
                 });
             }
@@ -721,7 +744,7 @@ router.post('/addLikeLiving', (req, res) => {
             isCosmetic: false
         }).done((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "product add failed"
                 });
             }
@@ -769,7 +792,7 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
             }
         }).then((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "no such product"
                 })
             }
@@ -817,7 +840,7 @@ router.delete('/cancelLikeLiving', (req, res) => {
             }
         }).then((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "no such product"
                 })
             }
@@ -947,7 +970,7 @@ router.post('/requestPassword', (req, res) => {
         }
     }).then((result) => {
         if (!result) {
-            res.json({
+            res.status(403).json({
                 error: "incorrect email"
             });
         } else {
@@ -1004,13 +1027,13 @@ router.put('/editProfile/resetPassword', (req, res) => {
         
         bcrypt.genSalt(10, (err, salt) => {
             if (err) {
-                res.json({
+                res.status(424).json({
                     error: "salt generation failed"
                 })
             } else {
                 bcrypt.hash(req.body.password, salt, null, (err, hash) => {
                     if (err) {
-                        res.json({
+                        res.status(424).json({
                             error: "hash generation failed"
                         })
                     } else {
@@ -1024,7 +1047,7 @@ router.put('/editProfile/resetPassword', (req, res) => {
                             }
                         }).then((result) => {
                             if (!result) {
-                                res.json({
+                                res.status(424).json({
                                     error: "update failed"
                                 });
                             } else {
@@ -1157,20 +1180,20 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
             }
         }).then((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "no info"
                 })
             } else {
                 deleteParams.Key = "profile-images/" + token.email + getExtension(result.dataValues.photoUrl);
                 s3.deleteObject(deleteParams, (err, data) => {
                     if (err) {
-                        res.json({
+                        res.status(424).json({
                             error: "s3 delete failed"
                         });
                     } else {
                         s3.putObject(addParams, (err, data) => {
                             if (err) {
-                                res.json({
+                                res.status(424).json({
                                     error: "s3 store failed"
                                 });
                             } else {
@@ -1186,7 +1209,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                                     }
                                 ).then((result) => {
                                     if (!result) {
-                                        res.json({
+                                        res.status(424).json({
                                             error: "update failed"
                                         });
                                     }
@@ -1239,12 +1262,12 @@ router.post('/requestIngredOpen', (req, res) => {
             }
         }).then((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "no product"
                 })
             } else {
                 if (result.dataValues.ingredient === 'O') {
-                    res.json({
+                    res.status(400).json({
                         error: "already open"
                     })
                 } else {
@@ -1253,7 +1276,7 @@ router.post('/requestIngredOpen', (req, res) => {
                         productIndex: req.body.productIndex,
                     }).done((result) => {
                         if (!result) {
-                            res.json({
+                            res.status(424).json({
                                 error: "product add failed"
                             });
                         }
@@ -1304,7 +1327,7 @@ router.delete('/cancelIngredOpen', (req, res) => {
             }
         }).then((result) => {
             if (!result) {
-                res.json({
+                res.status(424).json({
                     error: "no product"
                 })
             }
@@ -1318,7 +1341,7 @@ router.delete('/cancelIngredOpen', (req, res) => {
                     }
                 }).then((result) => {
                     if (!result) {
-                        res.json({
+                        res.status(424).json({
                             error: "update failure"
                         })
                     } else {
@@ -1379,4 +1402,80 @@ router.get('/ingredOpen', (req, res) => {
         return;
     });
 });
+
+router.post('/requestIngredAnal', formidable(), (req, res) => {
+    let token = req.headers['token'];
+    const count = countFiles("ingredient-analysis-files/request-files");
+
+    const params = {
+        Bucket: config.s3Bucket,
+        Key: null,
+        ACL: 'public-read',
+        Body: null
+    };
+
+    reqObj = {};
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).send("invalid request");
+            return;
+        }
+
+        if (!req.fields.title || !req.fields.isCosmetic || !req.fields.requestContent) {
+            res.status(400).send("invalid request");
+            return;
+        }
+
+        reqObj.memberIndex = token.index;
+        reqObj.title = req.fields.title;
+        reqObj.isCosmetic = req.fields.isCosmetic === 'true';
+        reqObj.requestContent = req.fields.requestContent;
+
+        if (!(typeof req.files.requestFile === 'undefined')) {
+            if (req.files.requestFile.data.toString('hex',0,4) ==  '89504e47' 
+                    || req.files.requestFile.data.toString('hex',0,4) == 'ffd8ffe0' 
+                    || req.files.requestFile.data.toString('hex',0,4) == '47494638') {
+                params.Key = "ingredient-analysis-files/request-files" + count + getExtension(req.files.requestFile.name);
+                params.Body = require('fs').createReadStream(req.files.image.path);
+            } else {
+                res.status(400).json({
+                    error: "invalid file(image only)"
+                })
+            }
+        } else {
+            params.Key = "NO";
+            params.Body = "NO";
+        }
+
+        // s3.putObject(params, function(err, data) {
+        //     if (err) {
+        //         res.json({
+        //             error: "s3 store failed"
+        //         });
+        //     } else {
+        //         if (!(params.Key === "NO") && !(params.Key === "NO")) {
+        //             infoObj.photoUrl = config.s3Url + params.Key;
+        //         }
+        //         db.MemberInfo.create(
+        //             infoObj
+        //         ).done((result) => {
+        //             if (!result) {
+        //                 res.json({
+        //                     error: "member creation failed"
+        //                 });
+        //             }
+        //             else {
+        //                 res.json(result);
+        //             }
+        //         });
+        //     }
+        // });
+
+    }).catch((error) => {
+        res.status(403).send("unauthorized request");
+        return;
+    });
+});
+
 module.exports = router;

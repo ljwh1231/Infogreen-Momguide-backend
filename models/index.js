@@ -40,6 +40,7 @@ const MemberToHome = require('./MemberToHome')(sequelize, Sequelize);
 const MemberToLike = require('./MemberToLike')(sequelize, Sequelize);
 
 const MemberToOpenRequest = require('./MemberToOpenRequest')(sequelize, Sequelize);
+const IngredientAnalysis = require('./IngredientAnalysis')(sequelize, Sequelize);
 
 module.exports = {
     CosmeticIngredient,
@@ -50,5 +51,6 @@ module.exports = {
     MemberToHome,
     MemberToLike,
     MemberToOpenRequest,
+    IngredientAnalysis,
     sequelize
 };
