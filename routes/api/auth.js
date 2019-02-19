@@ -21,8 +21,9 @@ function getExtension(fileName) {
 function decodeToken(token) {
 
     if (!token) {
-        res.status(400).send("invalid request");
-        return;
+        res.status(400).json({
+            error: "invalid request"
+        })
     }
 
     token = token.substring(7);
@@ -68,23 +69,6 @@ async function findProduct(prevResult) {
     return returnArray;
 }
 
-// async function to find the number of s3 bucket
-async function countFiles(folderName) {
-    const params = {
-        Bucket: config.s3Bucket, 
-        Prefix: folderName
-    };
-    await s3.listObjectsV2(params, (err, result) => {
-        if (err) {
-            res.status(424).json({
-                error: "s3 count failed"
-            })
-        } else {
-            return result.KeyCount;
-        }
-    });
-}
-
 /*
     > 회원가입
     > POST /api/auth/register
@@ -94,11 +78,13 @@ async function countFiles(folderName) {
     > 필수/선택정보(hasChild가 true일 경우엔 필수로 받기. 아니면 받지 않기.): childBirthYear(자식생년), childBirthMonth(자식생월), childBirthDay(자식생일)
     > 선택정보: name(이름), phoneNum(휴대폰번호 - "-" 빼고 숫자로만 이루어진 string으로), postalCode(우편번호), addressRoad(도로명 주소), addressSpec(상세주소),
       addressEtc(참고주소)
-    > 400: invalid request
-      412: precondition unsatisfied
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "precondition unsatisfied": value가 조건에 맞지 않음
           "salt generation failed": 솔트 생성 실패
           "hash generation failed": 해쉬 생성 실패
+          "invalid file(image only)": 전달된 파일이 이미지 파일이 아님
+          "no file input": 파일이 전달되지 않음
           "s3 store failed": s3 버켓 안에 이미지 저장 실패
           "member creation failed": db안에 회원정보 생성 실패
       }
@@ -123,17 +109,14 @@ router.post('/register', formidable(), (req, res) => {
             
         res.status(400).json({
             error: "invalid request"
-        });
-        return;
-    }
+        });    }
 
     infoObj.email = req.fields.email;
 
-    if (req.fields.password.length > 15 || req.fields.password.length < 6) {
+    if (req.fields.password.length > 15 || req.fields.password.length < 6 || req.fields.nickName.length > 6) {
         res.status(412).json({
             error: "precondition unsatisfied"
         });
-        return;
     }
 
     infoObj.nickName = req.fields.nickName;
@@ -149,7 +132,6 @@ router.post('/register', formidable(), (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
-            return;
         } else {
             infoObj.childBirthYear = Number(req.fields.childBirthYear);
             infoObj.childBirthMonth = Number(req.fields.childBirthMonth);
@@ -204,21 +186,30 @@ router.post('/register', formidable(), (req, res) => {
                                 infoObj.password = hash;
             
                                 if (!(typeof req.files.image === 'undefined')) {
-                                    params.Key = "profile-images/" + infoObj.email + getExtension(req.files.image.name);
-                                    params.Body = require('fs').createReadStream(req.files.image.path);
+                                    if (!(req.files.image.type ===  'image/gif' 
+                                            || req.files.image.type === 'image/jpg' 
+                                            || req.files.image.type === 'image/png'
+                                            || req.files.image.type === 'image/jpeg')) {
+                                        res.status(400).json({
+                                            error: "invalid file(image only)"
+                                        });
+                                    } else {
+                                        params.Key = "profile-images/" + infoObj.email + getExtension(req.files.image.name);
+                                        params.Body = require('fs').createReadStream(req.files.image.path);
+                                    }
                                 } else {
-                                    params.Key = "NO";
-                                    params.Body = "NO";
+                                    res.status(400).json({
+                                        error: "no file input"
+                                    });
                                 }
+
                                 s3.putObject(params, function(err, data) {
                                     if (err) {
                                         res.status(424).json({
                                             error: "s3 store failed"
                                         });
                                     } else {
-                                        if (!(params.Key === "NO") && !(params.Key === "NO")) {
-                                            infoObj.photoUrl = config.s3Url + params.Key;
-                                        }
+                                        infoObj.photoUrl = config.s3Url + params.Key;
                                         db.MemberInfo.create(
                                             infoObj
                                         ).done((result) => {
@@ -238,7 +229,9 @@ router.post('/register', formidable(), (req, res) => {
                     }
                 });
             } else {
-              res.status(400).send("invalid request");
+                res.status(400).json({
+                    error: "invalid request"
+                });
             }
         });
 });
@@ -247,9 +240,11 @@ router.post('/register', formidable(), (req, res) => {
     > 이메일 중복 확인
     > GET /api/auth/register/checkEmail?email=enflwodn@gmail.com
     > req.query.email로 email을 전달
-    > 400: invalid request
-      isDuplicated: {
+    > isDuplicated: {
         true: 중복된 이메일이 존재
+      }
+      error: {
+          "invalid request": 올바른 req가 전달되지 않음
       }
     > isDuplicated: {
         false: 중복된 이메일이 존재하지 않음
@@ -257,8 +252,9 @@ router.post('/register', formidable(), (req, res) => {
 */
 router.get('/register/checkEmail', (req, res) => {
     if (!req.query.email) {
-        res.status(400).send("invalid request");
-        return;
+        res.status(400).json({
+            error: "invalid request"
+        });
     }
 
     db.MemberInfo.findOne({
@@ -280,9 +276,11 @@ router.get('/register/checkEmail', (req, res) => {
     > 닉네임 중복 확인
     > GET /api/auth/register/checkNickName?nickName=Peace
     > req.query.nickName nickName 전달
-    > 400: invalid request
-      isDuplicated: {
+    > isDuplicated: {
         true: 중복된 닉네임이 존재
+      }
+      error: {
+          "invalid request": 올바른 req가 전달되지 않음
       }
     > isDuplicated: {
         false: 중복된 닉네임이 존재하지 않음
@@ -290,8 +288,9 @@ router.get('/register/checkEmail', (req, res) => {
 */
 router.get('/register/checkNickName', (req, res) => {
     if (!req.query.nickName) {
-        res.status(400).send("invalid request");
-        return;
+        res.status(400).json({
+            error: "invalid request"
+        });
     }
 
     db.MemberInfo.findOne({
@@ -313,11 +312,11 @@ router.get('/register/checkNickName', (req, res) => {
     > 비밀번호 확인(프로필 수정 전에 확인)
     > GET /api/auth/editProfile/checkPassword?password=Ebubu1111
     > req.query.password에 password 전달
-    > 400: invalid request
-      403: unauthorized request
-      error: {
+    > error: {
+        "invalid request": 올바른 req가 전달되지 않음
         "no info": 해당 회원정보 없음
         "incorrect password": 비밀번호 일치하지 않음
+        "unauthorized request": 권한 없는 사용자가 접근
       }
     > success: {
           true: 성공적으로 완료. 다음 단계로.
@@ -327,13 +326,16 @@ router.get('/editProfile/checkPassword', (req, res) => {
     let token = req.headers['token'];
 
     if (!req.query.password) {
-        res.status(400).send("invalid request");
+        res.status(400).json({
+            error: "invalid request"
+        });
     }
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberInfo.findOne({
@@ -367,8 +369,9 @@ router.get('/editProfile/checkPassword', (req, res) => {
         });
         
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status(403).json({
+            error: "unauthorized request"
+        });
     })
 });
 
@@ -376,8 +379,8 @@ router.get('/editProfile/checkPassword', (req, res) => {
     > 로그인
     > POST /api/auth/login
     > req.body.email과 req.body.password에 각각 이메일과 비밀번호 전달
-    > 400: invalid request
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
           "no member": 해당 email이 디비에 없음. 회원가입이 되어 있지 않은 이메일
           "hash comparison failed": 해쉬 비교 과정에서 문제 발생
           "incorrect password": 해당 password의 해시와 디비에 저장된 해시가 일치하지 않음. 잘못된 비밀번호
@@ -389,8 +392,9 @@ router.get('/editProfile/checkPassword', (req, res) => {
 router.post('/login', (req, res) => {
 
     if (!req.body.email || !req.body.password) {
-        res.status(400).send("invalid request");
-        return;
+        res.status(400).json({
+            error: "invalid request"
+        });
     }
 
     db.MemberInfo.findOne({
@@ -440,10 +444,10 @@ router.post('/login', (req, res) => {
     > 회원정보 가져오기(팔로잉/팔로우는 추후에)
     > GET /api/auth/info
     > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
           "no info": 해당하는 정보의 유저가 없음(사실 로그인을 했다면 당연히 있겠지만)
+          "unauthorized request": 권한 없는 사용자가 접근
       }
     > {
         해당 회원의 정보
@@ -454,8 +458,9 @@ router.get('/info', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberInfo.findOne({
@@ -474,8 +479,9 @@ router.get('/info', (req, res) => {
             }
         });
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status(403).json({
+            error: "unauthorized request"
+        });
     })
 });
 
@@ -488,9 +494,8 @@ router.get('/info', (req, res) => {
     > 우리집 화장품 등록
     > POST /api/auth/addHomeCosmetic
     > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
           "product add failed": db에 해당 제품을 추가하는데에 문제 발생
       }
     > success: {
@@ -502,8 +507,9 @@ router.post('/addHomeCosmetic', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberToHome.create({
@@ -524,8 +530,9 @@ router.post('/addHomeCosmetic', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status(403).json({
+
+        });
     });
 });
 
@@ -533,10 +540,10 @@ router.post('/addHomeCosmetic', (req, res) => {
     > 우리집 생활화확제품 등록
     > POST /api/auth/addHomeLiving
     > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
           "product add failed": db에 해당 제품을 추가하는데에 문제 발생
+          "unauthorized request": 권한 없는 사용자가 접근
       }
     > success: {
         true: 성공적으로 등록
@@ -547,8 +554,9 @@ router.post('/addHomeLiving', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberToHome.create({
@@ -569,8 +577,9 @@ router.post('/addHomeLiving', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
@@ -579,10 +588,10 @@ router.post('/addHomeLiving', (req, res) => {
     > 우리집 화장품 취소
     > DELETE /api/auth/cancelHomeCosmetic
     > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
           "no such product": db에 해당 제품이 없어서 삭제 실패
+          "unauthorized request": 권한 없는 사용자가 접근 
       }
     > success: {
         true: 성공적으로 삭제
@@ -593,8 +602,9 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberToHome.destroy({
@@ -617,8 +627,9 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
@@ -627,10 +638,10 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
     > 우리집 생활화학제품 취소
     > DELETE /api/auth/cancelHomeLiving
     > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
           "no such product": db에 해당 제품이 없어서 삭제 실패
+          "unauthorized request": 권한 없는 사용자가 접근
       }
     > success: {
         true: 성공적으로 삭제
@@ -641,8 +652,9 @@ router.delete('/cancelHomeLiving', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberToHome.destroy({
@@ -665,8 +677,9 @@ router.delete('/cancelHomeLiving', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
@@ -675,10 +688,10 @@ router.delete('/cancelHomeLiving', (req, res) => {
     > 찜 화장품 등록
     > POST /api/auth/addLikeCosmetic
     > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
           "product add failed": db에 해당 제품을 추가하는데에 문제 발생
+          "unauthorized request": 권한 없는 사용자가 접근
       }
     > success: {
         true: 성공적으로 등록
@@ -689,8 +702,9 @@ router.post('/addLikeCosmetic', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberToLike.create({
@@ -711,8 +725,9 @@ router.post('/addLikeCosmetic', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
@@ -720,10 +735,10 @@ router.post('/addLikeCosmetic', (req, res) => {
     > 찜 생활화학제품 등록
     > POST /api/auth/addLikeLiving
     > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
           "product add failed": db에 해당 제품을 추가하는데에 문제 발생
+          "unauthorized request": 권한 없는 사용자가 접근
       }
     > success: {
         true: 성공적으로 등록
@@ -734,8 +749,9 @@ router.post('/addLikeLiving', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberToLike.create({
@@ -756,8 +772,9 @@ router.post('/addLikeLiving', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
@@ -766,10 +783,10 @@ router.post('/addLikeLiving', (req, res) => {
     > 찜 화장품 취소
     > DELETE /api/auth/cancelLikeCosmetic
     > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
           "no such product": db에 해당 제품이 없어서 삭제 실패
+          "unauthorized request": 권한 없는 사용자가 접근
       }
     > success: {
         true: 성공적으로 삭제
@@ -780,8 +797,9 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberToLike.destroy({
@@ -804,8 +822,9 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
@@ -814,10 +833,10 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
     > 찜 생활화학제품 취소
     > DELETE /api/auth/cancelLikeLiving
     > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달.
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
           "no such product": db에 해당 제품이 없어서 삭제 실패
+          "unauthorized request": 권한 없는 사용자가 접근
       }
     > success: {
         true: 성공적으로 삭제
@@ -828,8 +847,9 @@ router.delete('/cancelLikeLiving', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberToLike.destroy({
@@ -852,8 +872,9 @@ router.delete('/cancelLikeLiving', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
@@ -869,9 +890,11 @@ router.delete('/cancelLikeLiving', (req, res) => {
     > 우리집 화학제품 불러오기 
     > GET /api/auth/homeProduct
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
-    > 400: invalid request
-      403: unauthorized access
-      []: 빈 배열. 검색 결과 없음.
+    > []: 빈 배열. 검색 결과 없음.
+      error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
     > [
         []
         [] : 두 배열을 가진 배열로 리턴. 1번째 배열은 화장품, 2번째 배열은 생활화학제품들의 객체로 이루어짐.
@@ -882,8 +905,9 @@ router.get('/homeProduct', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberToHome.findAll({
@@ -900,8 +924,9 @@ router.get('/homeProduct', (req, res) => {
             }
         });
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     })
 });
 
@@ -909,9 +934,11 @@ router.get('/homeProduct', (req, res) => {
     > 찜 화학제품 불러오기 
     > GET /api/auth/likeProduct
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
-    > 400: invalid request
-      403: unauthorized access
-      []: 빈 배열. 검색 결과 없음.
+    > []: 빈 배열. 검색 결과 없음.
+      error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
     > [
         []
         [] : 두 배열을 가진 배열로 리턴. 1번째 배열은 화장품, 2번째 배열은 생활화학제품들의 객체로 이루어짐.
@@ -922,8 +949,9 @@ router.get('/likeProduct', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberToLike.findAll({
@@ -940,8 +968,9 @@ router.get('/likeProduct', (req, res) => {
             }
         });
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
@@ -949,9 +978,7 @@ router.get('/likeProduct', (req, res) => {
     > 비밀번호 변경을 위한 이메일 요청(로그인을 못 했을 시)
     > POST /api/auth/editProfile/requestPassword
     > req.body.email로 email 전달.
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
           "incorrect email": 적절하지 않은 이메일(가입시 입력한 이메일과 다름)
       }
     > token: {
@@ -1005,12 +1032,12 @@ router.post('/requestPassword', (req, res) => {
     > 비밀번호 변경
     > PUT /api/auth/editProfile/resetPassword
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.password로 새로운 비밀번호 전달
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
+        "invalid request": 올바른 req가 전달되지 않음
         "salt generation failed": 솔트 생성 실패
         "hash generation failed": 해쉬 생성 실패
         "update failed": db에 있는 정보 변경 실패
+        "unauthorized request": 권한 없는 사용자가 접근
       }
     > success: {
         true: 성공적으로 변경
@@ -1021,8 +1048,9 @@ router.put('/editProfile/resetPassword', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
         
         bcrypt.genSalt(10, (err, salt) => {
@@ -1062,8 +1090,9 @@ router.put('/editProfile/resetPassword', (req, res) => {
         });
         
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
@@ -1078,13 +1107,12 @@ router.put('/editProfile/resetPassword', (req, res) => {
     > 필수/선택정보(hasChild가 true일 경우엔 필수로 받기. 아니면 받지 않기.): childBirthYear(자식생년), childBirthMonth(자식생월), childBirthDay(자식생일)
     > 선택정보: name(이름), phoneNum(휴대폰번호 - "-" 빼고 숫자로만 이루어진 string으로), postalCode(우편번호), addressRoad(도로명 주소), addressSpec(상세주소),
       addressEtc(참고주소)
-    > 400: invalid request
-      403: unauthorized request
-      error: {
+    > error: {
           "no info": 회원정보 없음
           "s3 delete failed": s3 버켓 안에 있는 기존 프로필 사진 변경 실패
           "s3 store failed": s3 버켓에 이미지 저장 실패
           "update failed": db 안에 있는 회원정보 변경 실패
+          "unauthorized request": 권한 없는 사용자가 접근
       }
     > success: {
         true: 성공적으로 회원정보 변경
@@ -1106,16 +1134,18 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
     };
 
     if (req.fields.email) {
-        res.status(400).send("invalid request");
-        return;
+        res.status(400).json({
+            error: "invalid request"
+        });
     }
 
     const infoObj = {};
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
         
         infoObj.nickName = req.fields.nickName;
@@ -1127,8 +1157,9 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
 
         if (infoObj.hasChild === true) {
             if (!req.fields.childBirthYear || !req.fields.childBirthMonth || !req.fields.childBirthDay) {
-                res.status(400).send("invalid request");
-                return;
+                res.status(400).json({
+                    error: "invalid request"
+                });
             } else {
                 infoObj.childBirthYear = Number(req.fields.childBirthYear);
                 infoObj.childBirthMonth = Number(req.fields.childBirthMonth);
@@ -1227,8 +1258,9 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
         });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     })
 });
 
@@ -1236,12 +1268,12 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
     > 성분 공개 요청
     > POST /api/auth/requestIngredOpen
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
           "no product": 해당 제품 없음
           "already open": 이미 성분 공개된 제품
           "product add failed": db에 해당 제품 등록 실패
+          "unauthrized request": 권한 없는 사용자가 접근
       }
     > success: {
         true: 성공적으로 등록
@@ -1252,8 +1284,9 @@ router.post('/requestIngredOpen', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.LivingDB.findOne({
@@ -1291,8 +1324,9 @@ router.post('/requestIngredOpen', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
@@ -1300,11 +1334,11 @@ router.post('/requestIngredOpen', (req, res) => {
     > 성분 공개 완료 후 요청 목록에서 삭제(이것은 유저가 하는것이 아니라 추후에 admin 계정이 있을 때 admin 권한으로 삭제하는것. 지금은 일단 아무 유저나 삭제 가능.)
     > POST /api/auth/cancelIngredOpen
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달
-    > 400: invalid request
-      403: unauthorized access
-      error: {
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
           "no product": 해당 제품 없이 없어 삭제 불가
           "update failure": 해당 제품의 상태를 성분 공개 상태로 바꾸는 데에 실패
+          "unauthorized request": 권한 없는 사용자가 접근
       }
     > success: {
         true: 성공적으로 변경
@@ -1315,8 +1349,9 @@ router.delete('/cancelIngredOpen', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         // token.index가 admin의 index인지 확인하는 작업 필요!
@@ -1354,8 +1389,9 @@ router.delete('/cancelIngredOpen', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
@@ -1363,8 +1399,10 @@ router.delete('/cancelIngredOpen', (req, res) => {
     > 성분 공개 요청한 제품들 목록 받아오기
     > GET /api/auth/ingredOpen
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
-    > 400: invalid request
-      403: unauthorized access
+    > erro: {
+        "invalid request": 올바른 req가 전달되지 않음
+        "unauthorized request": 권한 없는 사용자가 접근
+    }
     > [
         결과를 배열로 전달
       ]
@@ -1375,8 +1413,9 @@ router.get('/ingredOpen', (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         db.MemberToOpenRequest.findAll({
@@ -1398,14 +1437,32 @@ router.get('/ingredOpen', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
+/*
+    > 성분 분석 요청
+    > POST /api/auth/requestIngredAnal
+    > form data로 데이터 전달. 각 데이터의 이름은 디비와 통일.
+    > 필수정보: memberIndex(요청하는 유저의 인덱스), title(포스트 제목), isCosmetic(제품 종류. 화장품이면 true, 생활화학제품은 false), requestContent(요청내용)
+    > 선택정보: requestFile(요청 제품 사진. 유저가 업로드하지 않으면 그냥 보내지 않기.)
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "invalid file(image only)": 전달된 파일이 이미지 파일이 아님
+          "post add failed: 요청이 저장되지 않음
+          "s3 store failed": s3 버켓 안에 이미지 저장 실패
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
+    > result: {
+        db안에 생성된 요청정보가 전달
+    } 
+*/
 router.post('/requestIngredAnal', formidable(), (req, res) => {
     let token = req.headers['token'];
-    const count = countFiles("ingredient-analysis-files/request-files");
+    let nextIndex = 0;
 
     const params = {
         Bucket: config.s3Bucket,
@@ -1418,13 +1475,15 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         if (!req.fields.title || !req.fields.isCosmetic || !req.fields.requestContent) {
-            res.status(400).send("invalid request");
-            return;
+            res.status(400).json({
+                error: "invalid request"
+            });
         }
 
         reqObj.memberIndex = token.index;
@@ -1432,49 +1491,346 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
         reqObj.isCosmetic = req.fields.isCosmetic === 'true';
         reqObj.requestContent = req.fields.requestContent;
 
-        if (!(typeof req.files.requestFile === 'undefined')) {
-            if (req.files.requestFile.data.toString('hex',0,4) ==  '89504e47' 
-                    || req.files.requestFile.data.toString('hex',0,4) == 'ffd8ffe0' 
-                    || req.files.requestFile.data.toString('hex',0,4) == '47494638') {
-                params.Key = "ingredient-analysis-files/request-files" + count + getExtension(req.files.requestFile.name);
-                params.Body = require('fs').createReadStream(req.files.image.path);
+        db.IngredientAnalysis.findAll({
+            limit: 1,
+            where: {},
+            order: [[ 'created_at', 'DESC' ]]
+        }).then((result) => {
+            if (!result) {
+                nextIndex = 1;
             } else {
-                res.status(400).json({
-                    error: "invalid file(image only)"
-                })
+                nextIndex = result[0].dataValues.index + 1;
             }
-        } else {
-            params.Key = "NO";
-            params.Body = "NO";
-        }
 
-        // s3.putObject(params, function(err, data) {
-        //     if (err) {
-        //         res.json({
-        //             error: "s3 store failed"
-        //         });
-        //     } else {
-        //         if (!(params.Key === "NO") && !(params.Key === "NO")) {
-        //             infoObj.photoUrl = config.s3Url + params.Key;
-        //         }
-        //         db.MemberInfo.create(
-        //             infoObj
-        //         ).done((result) => {
-        //             if (!result) {
-        //                 res.json({
-        //                     error: "member creation failed"
-        //                 });
-        //             }
-        //             else {
-        //                 res.json(result);
-        //             }
-        //         });
-        //     }
-        // });
+            if (!(typeof req.files.requestFile === 'undefined')) {
+                if (!(req.files.requestFile.type ===  'image/gif' 
+                        || req.files.requestFile.type === 'image/jpg' 
+                        || req.files.requestFile.type === 'image/png')) {
+                    res.status(400).json({
+                        error: "invalid file(image only)"
+                    });
+                } else {
+                    params.Key = "ingredient-analysis-files/request-files/" + nextIndex.toString() + getExtension(req.files.requestFile.name);
+                    params.Body = require('fs').createReadStream(req.files.requestFile.path);   
+                }
+            } else {
+                params.Key = "NO";
+                params.Body = "NO";
+            }
+            
+            if (!(params.Key === "NO") && !(params.Key === "NO")) {
+                reqObj.requestFileUrl = config.s3Url + params.Key;
+            }
+
+            db.IngredientAnalysis.create(reqObj).done((result) => {
+                if (!result) {
+                    res.status(424).json({
+                        error: "post add failed"
+                    });
+                } else {
+                    if (!(params.Key === "NO") && !(params.Key === "NO")) {
+                        s3.putObject(params, (err, data) => {
+                            if (err) {
+                                res.status(424).json({
+                                    error: "s3 store failed"
+                                });
+                            } else {
+                                res.json(result);
+                            }
+                        });
+                    } else {
+                        res.json(result);
+                    }
+                }
+            });
+        });
 
     }).catch((error) => {
-        res.status(403).send("unauthorized request");
-        return;
+        res.status.json({
+            error: "unauthorized request"
+        });
+    });
+});
+
+/*
+    > 성분 분석 요청 수정
+    > PUT /api/auth/requestIngredAnal?index=1
+    > form data로 데이터 전달. 각 데이터의 이름은 디비와 통일. 수정하고자 하는 요청의 index를 req.query.index로 전달
+    > 필수정보: title(포스트 제목), isCosmetic(제품 종류. 화장품이면 true, 생활화학제품은 false), requestContent(요청내용)
+    > 선택정보: requestFile(요청 제품 사진. 유저가 업로드하지 않으면 그냥 보내지 않기. 제품 사진이 있었는데 없애는 경우도 프론트에서 사진 없앤 후 api에는 사진을 안 보내면 됨.)
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "invalid file(image only)": 전달된 파일이 이미지 파일이 아님
+          "s3 store failed": s3 버켓 안에 이미지 저장 실패
+          "s3 delete failed": s3 버켓 안의 이미지 삭제 실패
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
+    > success: {
+        true: 성공적으로 변경
+      }
+*/
+router.put('/editIngredAnal', formidable(), (req, res) => {
+    let token = req.headers['token'];
+
+    const addParams = {
+        Bucket: 'infogreenmomguide',
+        Key: null,
+        ACL: 'public-read',
+        Body: null
+    };
+
+    const deleteParams = {
+        Bucket: 'infogreenmomguide',
+        Key: null
+    };
+
+    reqObj = {};
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !token.nickName || !req.query.index) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+        }
+
+        db.IngredientAnalysis.findOne({
+            where: {
+                index: req.query.index,
+                memberIndex: token.index
+            }
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such post"
+                });
+            } else {
+                if (result.dataValues.responseContent !== null) {
+                    res.status(424).json({
+                        error: "already responsed"
+                    });
+                } else {
+                    if (!req.fields.title || !req.fields.isCosmetic || !req.fields.requestContent) {
+                        res.status(400).json({
+                            error: "invalid request"
+                        });
+                    }
+
+                    reqObj.title = req.fields.title;
+                    reqObj.isCosmetic = req.fields.isCosmetic === 'true';
+                    reqObj.requestContent = req.fields.requestContent;
+
+                    if (!(typeof req.files.requestFile === 'undefined')) {
+                        if (!(req.files.requestFile.type ===  'image/gif' 
+                                || req.files.requestFile.type === 'image/jpg' 
+                                || req.files.requestFile.type === 'image/png'
+                                || req.files.requestFile.type === 'image/jpeg')) {
+                            res.status(400).json({
+                                error: "invalid file(image only)"
+                            });
+                        } else {
+                            addParams.Key = "ingredient-analysis-files/request-files/" + req.query.index.toString() + getExtension(req.files.requestFile.name);
+                            addParams.Body = require('fs').createReadStream(req.files.requestFile.path);
+                            reqObj.requestFileUrl = config.s3Url + addParams.Key;   
+                        }
+                    } else {
+                        addParams.Key = "NO";
+                        addParams.Body = "NO";
+                        reqObj.requestFileUrl = null;
+                    }
+
+                    if (result.dataValues.requestFileUrl !== null) {
+                        deleteParams.Key = "ingredient-analysis-files/request-files/" + req.query.index.toString() + getExtension(result.dataValues.requestFileUrl);
+                    } else {
+                        deleteParams.Key = "NO";
+                    }
+
+                    db.IngredientAnalysis.update(
+                        reqObj,
+                        {
+                            where: {
+                                index: req.query.index,
+                                memberIndex: token.index
+                            }
+                        }
+                    ).then((result) => {
+                        if (deleteParams.Key === 'NO') {
+                            if (addParams.Key === 'NO') {
+                                res.json({
+                                    success: true
+                                });
+                            } else {
+                                s3.putObject(addParams, (err, data) => {
+                                    if (err) {
+                                        res.status(424).json({
+                                            error: "s3 store failed"
+                                        });
+                                    } else {
+                                        res.json({
+                                            success: true
+                                        });
+                                    }
+                                });
+                            }
+                        } else {
+                            s3.deleteObject(deleteParams, (err, data) => {
+                                if (err) {
+                                    res.status(424).json({
+                                        error: "s3 delete failed"
+                                    });
+                                } else {
+                                    if (addParams.Key === 'NO') {
+                                        res.json({
+                                            success: true
+                                        });
+                                    } else {
+                                        s3.putObject(addParams, (err, data) => {
+                                            if (err) {
+                                                res.status(424).json({
+                                                    error: "s3 store failed"
+                                                });
+                                            } else {
+                                                res.json({
+                                                    success: true
+                                                });
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
+
+    }).catch((error) => {
+        res.status.json({
+            error: "unauthorized request"
+        });
+    });
+});
+
+/*
+    > 성분 분석 요청
+    > DELETE /api/auth/cancelIngredAnal?index=1
+    > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 수정하고자 하는 요청의 index를 req.query.index로 전달.
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such post": db에 해당 요청이 존재하지 않음
+          "s3 delete failed": s3 버켓 안의 파일 삭제 실패
+          "unauthorized request": 권한 없는 사용자가 접근 
+      }
+    > success: {
+        true: 성공적으로 삭제
+      }
+*/
+router.delete('/cancelIngredAnal', (req, res) => {
+    let token = req.headers['token'];
+
+    const params = {
+        Bucket: 'infogreenmomguide',
+        Key: null
+    };
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+        }
+
+        db.IngredientAnalysis.findOne({
+            where: {
+                index: req.query.index,
+                memberIndex: token.index
+            }
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such post"
+                });
+            } else {
+                if (result.dataValues.requestFileUrl !== null) {
+                    params.Key = "ingredient-analysis-files/request-files/" + req.query.index.toString() + getExtension(result.dataValues.requestFileUrl);
+                } else {
+                    params.Key = "NO";
+                }
+
+                db.IngredientAnalysis.destroy({
+                    where: {
+                        index: req.query.index,
+                        memberIndex: token.index
+                    }
+                }).then((result) => {
+                    if (!result) {
+                        res.status(424).json({
+                            error: "no such post"
+                        });
+                    } else {
+                        if (params.Key !== "NO") {
+                            s3.deleteObject(params, (err, data) => {
+                                if (err) {
+                                    res.status(424).json({
+                                        error: "s3 delete failed"
+                                    });
+                                } else {
+                                    res.json({
+                                        success: true
+                                    });
+                                }
+                            });
+                        } else {
+                            res.json({
+                                success: true
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
+    }).catch((error) => {
+        res.status.json({
+            error: "unauthorized request"
+        });
+    });
+});
+
+/*
+    > 성분 분석 요청 목록 불러오기
+    > GET /api/auth/ingredAnal
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
+    > []: 빈 배열. 검색 결과 없음.
+      error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
+    > [
+        결과를 배열로 전달
+      ]
+*/
+router.get('/ingredAnal', (req, res) => {
+    let token = req.headers['token'];
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+        }
+
+        db.IngredientAnalysis.findAll({
+            where: {
+                memberIndex: token.index
+            }
+        }).then((result) => {
+            res.json(result);
+        });
+
+    }).catch((error) => {
+        res.status.json({
+            error: "unauthorized request"
+        });
     });
 });
 
