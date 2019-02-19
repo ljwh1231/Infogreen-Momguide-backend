@@ -308,7 +308,7 @@ router.get('/editProfile/checkPassword', (req, res) => {
     }
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email) {
+        if (!token.index || !token.email || !token.nickName) {
             res.status(400).send("invalid request");
             return;
         }
@@ -316,7 +316,8 @@ router.get('/editProfile/checkPassword', (req, res) => {
         db.MemberInfo.findOne({
             where: {
                 index: token.index,
-                email: token.email
+                email: token.email,
+                nickName: token.nickName
             }
         }).then((result) => {
             if (!result) {
@@ -389,6 +390,7 @@ router.post('/login', (req, res) => {
                         const payload = {
                             index: result.index,
                             email: result.email,
+                            nickName: result.nickName
                           };
                         const jwtSecret = config.jwtSecret;
                         const options = {expiresIn: 60*60*24};
@@ -428,7 +430,7 @@ router.get('/info', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email) {
+        if (!token.index || !token.email || !token.nickName) {
             res.status(400).send("invalid request");
             return;
         }
@@ -436,7 +438,8 @@ router.get('/info', (req, res) => {
         db.MemberInfo.findOne({
             where: {
                 index: token.index,
-                email: token.email
+                email: token.email,
+                nickName: token.nickName
             },
         }).then((result) => {
             if (!result) {
@@ -475,7 +478,7 @@ router.post('/addHomeCosmetic', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.productIndex) {
+        if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
@@ -520,7 +523,7 @@ router.post('/addHomeLiving', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.productIndex) {
+        if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
@@ -566,7 +569,7 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.productIndex) {
+        if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
@@ -614,7 +617,7 @@ router.delete('/cancelHomeLiving', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.productIndex) {
+        if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
@@ -662,7 +665,7 @@ router.post('/addLikeCosmetic', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.productIndex) {
+        if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
@@ -707,7 +710,7 @@ router.post('/addLikeLiving', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.productIndex) {
+        if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
@@ -753,7 +756,7 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.productIndex) {
+        if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
@@ -801,7 +804,7 @@ router.delete('/cancelLikeLiving', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.productIndex) {
+        if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
@@ -855,7 +858,7 @@ router.get('/homeProduct', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email) {
+        if (!token.index || !token.email || !token.nickName) {
             res.status(400).send("invalid request");
             return;
         }
@@ -895,7 +898,7 @@ router.get('/likeProduct', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email) {
+        if (!token.index || !token.email || !token.nickName) {
             res.status(400).send("invalid request");
             return;
         }
@@ -952,6 +955,7 @@ router.post('/requestPassword', (req, res) => {
             const payload = {
                 index: result.index,
                 email: result.email,
+                nickName: result.nickName
               };
             const jwtSecret = config.jwtSecret;
             const options = {expiresIn: 60*60*24};
@@ -993,7 +997,7 @@ router.put('/editProfile/resetPassword', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email) {
+        if (!token.index || !token.email || !token.nickName) {
             res.status(400).send("invalid request");
             return;
         }
@@ -1086,7 +1090,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
     const infoObj = {};
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email) {
+        if (!token.index || !token.email || !token.nickName) {
             res.status(400).send("invalid request");
             return;
         }
@@ -1148,7 +1152,8 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
         db.MemberInfo.findOne({
             where: {
                 index: token.index,
-                email: token.email
+                email: token.email,
+                nickName: token.nickName
             }
         }).then((result) => {
             if (!result) {
@@ -1223,7 +1228,7 @@ router.post('/requestIngredOpen', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.productIndex) {
+        if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
@@ -1286,7 +1291,7 @@ router.delete('/cancelIngredOpen', (req, res) => {
     let token = req.headers['token'];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email || !req.body.productIndex) {
+        if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).send("invalid request");
             return;
         }
@@ -1346,7 +1351,7 @@ router.get('/ingredOpen', (req, res) => {
     let finalResult = [];
 
     decodeToken(token).then((token) => {
-        if (!token.index || !token.email) {
+        if (!token.index || !token.email || !token.nickName) {
             res.status(400).send("invalid request");
             return;
         }
