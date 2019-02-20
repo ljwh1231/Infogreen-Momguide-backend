@@ -577,7 +577,7 @@ router.post('/addHomeLiving', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -627,7 +627,7 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -677,7 +677,7 @@ router.delete('/cancelHomeLiving', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -725,7 +725,7 @@ router.post('/addLikeCosmetic', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -772,7 +772,7 @@ router.post('/addLikeLiving', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -822,7 +822,7 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -872,7 +872,7 @@ router.delete('/cancelLikeLiving', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -924,7 +924,7 @@ router.get('/homeProduct', (req, res) => {
             }
         });
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     })
@@ -968,7 +968,7 @@ router.get('/likeProduct', (req, res) => {
             }
         });
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -1090,7 +1090,7 @@ router.put('/editProfile/resetPassword', (req, res) => {
         });
         
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -1258,7 +1258,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     })
@@ -1324,14 +1324,14 @@ router.post('/requestIngredOpen', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
 });
 
 /*
-    > 성분 공개 완료 후 요청 목록에서 삭제(이것은 유저가 하는것이 아니라 추후에 admin 계정이 있을 때 admin 권한으로 삭제하는것. 지금은 일단 아무 유저나 삭제 가능.)
+    > 성분 공개 완료 후 요청 목록에서 삭제(이것은 유저가 하는것이 아니라 추후에 admin 계정이 있을 때 admin 권한으로 삭제하는것. 현재 admin의 유저 index는 1)
     > POST /api/auth/cancelIngredOpen
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.productIndex로 제품의 인덱스 전달
     > error: {
@@ -1354,7 +1354,11 @@ router.delete('/cancelIngredOpen', (req, res) => {
             });
         }
 
-        // token.index가 admin의 index인지 확인하는 작업 필요!
+        if (token.index !== 1) {
+            res.status(403).json({
+                error: "unauthorized request"
+            });
+        }
 
         db.MemberToOpenRequest.destroy({
             where: {
@@ -1389,7 +1393,7 @@ router.delete('/cancelIngredOpen', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -1437,7 +1441,7 @@ router.get('/ingredOpen', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -1546,7 +1550,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -1654,7 +1658,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
                         }
                     ).then((result) => {
                         if (deleteParams.Key === 'NO') {
-                            if (addParams.Key === 'NO') {
+                            if (addParams.Key === 'NO' && addParams.Body === 'NO') {
                                 res.json({
                                     success: true
                                 });
@@ -1704,14 +1708,14 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
 });
 
 /*
-    > 성분 분석 요청
+    > 성분 분석 요청 삭제
     > DELETE /api/auth/cancelIngredAnal?index=1
     > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 수정하고자 하는 요청의 index를 req.query.index로 전달.
     > error: {
@@ -1790,7 +1794,7 @@ router.delete('/cancelIngredAnal', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
@@ -1828,7 +1832,158 @@ router.get('/ingredAnal', (req, res) => {
         });
 
     }).catch((error) => {
-        res.status.json({
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+    });
+});
+
+/*
+    > admin이 유저가 요청한 성분 분석 포스트에 답변을 작성/수정(새로 작성하는 경우나 수정하는 경우 동일하므로 api 통일.)
+    > PUT /api/auth/responseIngredAnal?index=1
+    > form data로 데이터 전달. 각 데이터의 이름은 디비와 통일. 수정하고자 하는 요청의 index를 req.query.index로 전달
+    > 필수정보: responseContent(답변 내용)
+    > 선택정보: responseFile(admin이 답변과 함께 첨부하는 파일. 업로드하지 않으면 그냥 보내지 않기, 파일이 있었는데 없애는 경우에도 보내지 않기)
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such post": 해당 요청은 존재하지 않음
+          "s3 store failed": s3 버켓 안에 이미지 저장 실패
+          "s3 delete failed": s3 버켓 안의 이미지 삭제 실패
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
+    > success: {
+        true: 성공적으로 변경
+      }
+*/
+router.put('/responseIngredAnal', formidable(), (req, res) => {
+    let token = req.headers['token'];
+    const resObj = {};
+
+    const addParams = {
+        Bucket: 'infogreenmomguide',
+        Key: null,
+        ACL: 'public-read',
+        Body: null
+    };
+
+    const deleteParams = {
+        Bucket: 'infogreenmomguide',
+        Key: null
+    };
+
+    decodeToken(token).then((token) => {
+        
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+        }
+
+        if (token.index !== 1) {
+            res.status(403).json({
+                error: "unauthorized request"
+            });
+        }
+
+        if (!req.fields.responseContent || !req.query.index) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+        }
+
+        resObj.responseContent = req.fields.responseContent;
+
+        db.IngredientAnalysis.findOne({
+            where: {
+                index: req.query.index
+            }
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such post"
+                });
+            } else {
+                if (!(typeof req.files.responseFile === 'undefined')) {
+                    addParams.Key = "ingredient-analysis-files/response-files/" + req.query.index.toString() + getExtension(req.files.responseFile.name);
+                    addParams.Body = require('fs').createReadStream(req.files.responseFile.path);
+                    resObj.responseFileUrl = config.s3Url + addParams.Key;
+                } else {
+                    addParams.Key = "NO";
+                    addParams.Body = "NO";
+                    resObj.responseFileUrl = null;
+                }
+
+                if (result.dataValues.responseFileUrl !== null) {
+                    deleteParams.Key = "ingredient-analysis-files/response-files/" + req.query.index.toString() + getExtension(result.dataValues.responseFileUrl);
+                } else {
+                    deleteParams.Key = "NO";
+                }
+
+                db.IngredientAnalysis.update(
+                    resObj,
+                    {
+                        where: {
+                            index: req.query.index
+                        }
+                    }
+                ).then((result) => {
+                    if (!result) {
+                        res.status(424).json({
+                            error: "no such post"
+                        });
+                    } else {
+                        if (deleteParams.Key === 'NO') {
+                            if (addParams.Key === 'NO' && addParams.Body === 'NO') {
+                                res.json({
+                                    success: true
+                                });
+                            } else {
+                                s3.putObject(addParams, (err, data) => {
+                                    if (err) {
+                                        res.status(424).json({
+                                            error: "s3 store failed"
+                                        });
+                                    } else {
+                                        res.json({
+                                            success: true
+                                        });
+                                    }
+                                });
+                            }
+                        } else {
+                            s3.deleteObject(deleteParams, (err, data) => {
+                                if (err) {
+                                    res.status(424).json({
+                                        error: "s3 delete failed"
+                                    });
+                                } else {
+                                    if (!(addParams.Key === 'NO' && addParams.Body === 'NO')) {
+                                        s3.putObject(addParams, (err, data) => {
+                                            if (err) {
+                                                res.status(424).json({
+                                                    error: "s3 store failed"
+                                                });
+                                            } else {
+                                                res.json({
+                                                    success: true
+                                                });
+                                            }
+                                        });
+                                    } else {
+                                        res.json({
+                                            success: true
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
+    }).catch((error) => {
+        res.status(403).json({
             error: "unauthorized request"
         });
     });
