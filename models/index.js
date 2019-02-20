@@ -41,6 +41,7 @@ const MemberToLike = require('./MemberToLike')(sequelize, Sequelize);
 
 const MemberToOpenRequest = require('./MemberToOpenRequest')(sequelize, Sequelize);
 const IngredientAnalysis = require('./IngredientAnalysis')(sequelize, Sequelize);
+const OneToOneQuestion = require('./OneToOneQuestion')(sequelize, Sequelize);
 
 module.exports = {
     CosmeticIngredient,
@@ -52,5 +53,6 @@ module.exports = {
     MemberToLike,
     MemberToOpenRequest,
     IngredientAnalysis,
+    OneToOneQuestion,
     sequelize
 };
