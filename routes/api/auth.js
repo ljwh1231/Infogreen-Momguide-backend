@@ -165,7 +165,7 @@ router.post('/register', formidable(), (req, res) => {
 
     mailReq.post('https://' + config.mailchimpInstance + '.api.mailchimp.com/3.0/lists/' + config.mailchimpListId + '/members/')
         .set('Content-Type', 'application/json;charset=utf-8')
-        .set('Authorization', 'Basic ' + new Buffer('any:' + config.mailchimpApiKey ).toString('base64'))
+        .set('', 'Basic ' + new Buffer('any:' + config.mailchimpApiKey ).toString('base64'))
         .send({
           'email_address': infoObj.email,
           'status': (infoObj.mailed) ? 'subscribed' : 'unsubscribed'
@@ -311,7 +311,7 @@ router.get('/register/checkNickName', (req, res) => {
 /*
     > 비밀번호 확인(프로필 수정 전에 확인)
     > GET /api/auth/editProfile/checkPassword?password=Ebubu1111
-    > req.query.password에 password 전달
+    > header에 에 token을 넣어 전달. token 앞에 Bearer 붙일것. req.query.password에 password 전달
     > error: {
         "invalid request": 올바른 req가 전달되지 않음
         "no info": 해당 회원정보 없음
@@ -323,7 +323,7 @@ router.get('/register/checkNickName', (req, res) => {
       }
 */
 router.get('/editProfile/checkPassword', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     if (!req.query.password) {
         res.status(400).json({
@@ -453,7 +453,7 @@ router.post('/login', (req, res) => {
       }
 */
 router.post('/refreshToken', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
@@ -511,7 +511,7 @@ router.post('/refreshToken', (req, res) => {
       }
 */
 router.get('/info', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
@@ -560,7 +560,7 @@ router.get('/info', (req, res) => {
       }
 */
 router.post('/addHomeCosmetic', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
@@ -607,7 +607,7 @@ router.post('/addHomeCosmetic', (req, res) => {
       }
 */
 router.post('/addHomeLiving', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
@@ -655,7 +655,7 @@ router.post('/addHomeLiving', (req, res) => {
       }
 */
 router.delete('/cancelHomeCosmetic', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
@@ -705,7 +705,7 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
       }
 */
 router.delete('/cancelHomeLiving', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
@@ -755,7 +755,7 @@ router.delete('/cancelHomeLiving', (req, res) => {
       }
 */
 router.post('/addLikeCosmetic', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
@@ -802,7 +802,7 @@ router.post('/addLikeCosmetic', (req, res) => {
       }
 */
 router.post('/addLikeLiving', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
@@ -850,7 +850,7 @@ router.post('/addLikeLiving', (req, res) => {
       }
 */
 router.delete('/cancelLikeCosmetic', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
@@ -900,7 +900,7 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
       }
 */
 router.delete('/cancelLikeLiving', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
@@ -958,7 +958,7 @@ router.delete('/cancelLikeLiving', (req, res) => {
       ]
 */
 router.get('/homeProduct', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
@@ -1002,7 +1002,7 @@ router.get('/homeProduct', (req, res) => {
       ]
 */
 router.get('/likeProduct', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
@@ -1101,7 +1101,7 @@ router.post('/requestPassword', (req, res) => {
       }
 */
 router.put('/editProfile/resetPassword', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
@@ -1176,7 +1176,7 @@ router.put('/editProfile/resetPassword', (req, res) => {
       }
 */
 router.put('/editProfile/edit', formidable(), (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     const addParams = {
         Bucket: 'infogreenmomguide',
@@ -1337,7 +1337,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
       }
 */
 router.post('/requestIngredOpen', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
@@ -1402,7 +1402,7 @@ router.post('/requestIngredOpen', (req, res) => {
       }
 */
 router.delete('/cancelIngredOpen', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
@@ -1469,7 +1469,7 @@ router.delete('/cancelIngredOpen', (req, res) => {
       ]
 */
 router.get('/ingredOpen', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
     let finalResult = [];
 
     decodeToken(token).then((token) => {
@@ -1522,7 +1522,7 @@ router.get('/ingredOpen', (req, res) => {
     } 
 */
 router.post('/requestIngredAnal', formidable(), (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
     let nextIndex = 0;
 
     const params = {
@@ -1616,7 +1616,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
 
 /*
     > 성분 분석 요청 수정
-    > PUT /api/auth/requestIngredAnal?index=1
+    > PUT /api/auth/editIngredAnal?index=1
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. form data로 데이터 전달. 각 데이터의 이름은 디비와 통일. 수정하고자 하는 요청의 index를 req.query.index로 전달
     > 필수정보: title(포스트 제목), isCosmetic(제품 종류. 화장품이면 true, 생활화학제품은 false), requestContent(요청내용)
     > 선택정보: requestFile(요청 제품 사진. 유저가 업로드하지 않으면 그냥 보내지 않기. 제품 사진이 있었는데 없애는 경우도 프론트에서 사진 없앤 후 api에는 사진을 안 보내면 됨.)
@@ -1632,7 +1632,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
       }
 */
 router.put('/editIngredAnal', formidable(), (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     const addParams = {
         Bucket: 'infogreenmomguide',
@@ -1787,9 +1787,14 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
       }
 */
 router.delete('/cancelIngredAnal', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
-    const params = {
+    const requestParams = {
+        Bucket: 'infogreenmomguide',
+        Key: null
+    };
+
+    const responseParams = {
         Bucket: 'infogreenmomguide',
         Key: null
     };
@@ -1813,9 +1818,15 @@ router.delete('/cancelIngredAnal', (req, res) => {
                 });
             } else {
                 if (result.dataValues.requestFileUrl !== null) {
-                    params.Key = "ingredient-analysis-files/request-files/" + req.query.index.toString() + getExtension(result.dataValues.requestFileUrl);
+                    requestParams.Key = "ingredient-analysis-files/request-files/" + req.query.index.toString() + getExtension(result.dataValues.requestFileUrl);
                 } else {
-                    params.Key = "NO";
+                    requestParams.Key = "NO";
+                }
+
+                if (result.dataValues.responseFileUrl !== null) {
+                    responseParams.Key = "ingredient-analysis-files/response-files/" + req.query.index.toString() + getExtension(result.dataValues.responseFileUrl);
+                } else {
+                    responseParams.Key = "NO";
                 }
 
                 db.IngredientAnalysis.destroy({
@@ -1829,21 +1840,49 @@ router.delete('/cancelIngredAnal', (req, res) => {
                             error: "no such post"
                         });
                     } else {
-                        if (params.Key !== "NO") {
-                            s3.deleteObject(params, (err, data) => {
+                        if (requestParams.Key == "NO") {
+                            if (responseParams.Key == "NO") {
+                                res.json({
+                                    success: true
+                                });
+                            } else {
+                                s3.deleteObject(responseParams, (err, data) => {
+                                    if (err) {
+                                        res.status(424).json({
+                                            error: "s3 delete failed"
+                                        });
+                                    } else {
+                                        res.json({
+                                            success: true
+                                        });
+                                    }
+                                });
+                            }
+                        } else {
+                            s3.deleteObject(requestParams, (err, data) => {
                                 if (err) {
                                     res.status(424).json({
                                         error: "s3 delete failed"
                                     });
                                 } else {
-                                    res.json({
-                                        success: true
-                                    });
+                                    if (responseParams.Key == "NO") {
+                                        res.json({
+                                            success: true
+                                        });
+                                    } else {
+                                        s3.deleteObject(responseParams, (err, data) => {
+                                            if (err) {
+                                                res.status(424).json({
+                                                    error: "s3 delete failed"
+                                                });
+                                            } else {
+                                                res.json({
+                                                    success: true
+                                                });
+                                            }
+                                        });
+                                    }
                                 }
-                            });
-                        } else {
-                            res.json({
-                                success: true
                             });
                         }
                     }
@@ -1872,7 +1911,7 @@ router.delete('/cancelIngredAnal', (req, res) => {
       ]
 */
 router.get('/ingredAnal', (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
 
     decodeToken(token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
@@ -1914,7 +1953,7 @@ router.get('/ingredAnal', (req, res) => {
       }
 */
 router.put('/responseIngredAnal', formidable(), (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
     const resObj = {};
 
     const addParams = {
@@ -2065,7 +2104,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
     } 
 */
 router.post('/questionOneToOne', formidable(), (req, res) => {
-    let token = req.headers['token'];
+    let token = req.headers['authorization'];
     let nextIndex = 0;
 
     const params = {
@@ -2155,5 +2194,163 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
         });
     });
 });
+
+/*
+    > 1:1 문의 수정
+    > PUT /api/auth/editOneToOne?index=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. form data로 데이터 전달. 각 데이터의 이름은 디비와 통일. 수정하고자 하는 요청의 index를 req.query.index로 전달
+    > 필수정보: title(포스트 제목), questionContent(문의내용)
+    > 선택정보: questionFile(문의 관련 사진. 유저가 업로드하지 않으면 그냥 보내지 않기. 사진이 있었는데 없애는 경우도 프론트에서 사진 없앤 후 api에는 사진을 안 보내면 됨.)
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "invalid file(image only)": 전달된 파일이 이미지 파일이 아님
+          "s3 store failed": s3 버켓 안에 이미지 저장 실패
+          "s3 delete failed": s3 버켓 안의 이미지 삭제 실패
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
+    > success: {
+        true: 성공적으로 변경
+      }
+*/
+router.put('/editOneToOne', formidable(), (req, res) => {
+    let token = req.headers['authorization'];
+
+    const addParams = {
+        Bucket: 'infogreenmomguide',
+        Key: null,
+        ACL: 'public-read',
+        Body: null
+    };
+
+    const deleteParams = {
+        Bucket: 'infogreenmomguide',
+        Key: null
+    };
+
+    queObj = {};
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !token.nickName || !req.query.index) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+        }
+
+        db.OneToOneQuestion.findOne({
+            where: {
+                index: req.query.index,
+                memberIndex: token.index
+            }
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such post"
+                });
+            } else {
+                if (result.dataValues.answerContent !== null) {
+                    res.status(424).json({
+                        error: "already answered"
+                    });
+                } else {
+                    if (!req.fields.title || !req.fields.questionContent) {
+                        res.status(400).json({
+                            error: "invalid request"
+                        });
+                    }
+
+                    queObj.title = req.fields.title;
+                    queObj.questionContent = req.fields.questionContent;
+
+                    if (!(typeof req.files.questionFile === 'undefined')) {
+                        if (!(req.files.questionFile.type ===  'image/gif' 
+                                || req.files.questionFile.type === 'image/jpg' 
+                                || req.files.questionFile.type === 'image/png'
+                                || req.files.questionFile.type === 'image/jpeg')) {
+                            res.status(400).json({
+                                error: "invalid file(image only)"
+                            });
+                        } else {
+                            addParams.Key = "one-to-one-question-files/question-files/" + req.query.index.toString() + getExtension(req.files.questionFile.name);
+                            addParams.Body = require('fs').createReadStream(req.files.questionFile.path);
+                            queObj.questionFileUrl = config.s3Url + addParams.Key;   
+                        }
+                    } else {
+                        addParams.Key = "NO";
+                        addParams.Body = "NO";
+                        queObj.questionFileUrl = null;
+                    }
+
+                    if (result.dataValues.questionFileUrl !== null) {
+                        deleteParams.Key = "one-to-one-question-files/question-files/" + req.query.index.toString() + getExtension(result.dataValues.questionFileUrl);
+                    } else {
+                        deleteParams.Key = "NO";
+                    }
+
+                    db.OneToOneQuestion.update(
+                        queObj,
+                        {
+                            where: {
+                                index: req.query.index,
+                                memberIndex: token.index
+                            }
+                        }
+                    ).then((result) => {
+                        if (deleteParams.Key === 'NO') {
+                            if (addParams.Key === 'NO' && addParams.Body === 'NO') {
+                                res.json({
+                                    success: true
+                                });
+                            } else {
+                                s3.putObject(addParams, (err, data) => {
+                                    if (err) {
+                                        res.status(424).json({
+                                            error: "s3 store failed"
+                                        });
+                                    } else {
+                                        res.json({
+                                            success: true
+                                        });
+                                    }
+                                });
+                            }
+                        } else {
+                            s3.deleteObject(deleteParams, (err, data) => {
+                                if (err) {
+                                    res.status(424).json({
+                                        error: "s3 delete failed"
+                                    });
+                                } else {
+                                    if (addParams.Key === 'NO') {
+                                        res.json({
+                                            success: true
+                                        });
+                                    } else {
+                                        s3.putObject(addParams, (err, data) => {
+                                            if (err) {
+                                                res.status(424).json({
+                                                    error: "s3 store failed"
+                                                });
+                                            } else {
+                                                res.json({
+                                                    success: true
+                                                });
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
+
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+    });
+});
+
 
 module.exports = router;
