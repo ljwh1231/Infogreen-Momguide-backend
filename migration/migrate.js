@@ -88,11 +88,11 @@ const transformCosmeticComponents = csv.transform(function(row) {
         ewgData: ewgData,
         ewgCode: ewgCode,
         allergic: allergic,
-        breath: breath,
-        skin: skin,
-        dev: develop,
-        cancer: cancer,
-        eye: eye,
+        echaBreath: breath,
+        echaSkin: skin,
+        echaDev: develop,
+        echaCancer: cancer,
+        echaEye: eye,
         caution: caution,
         remarks: remarks
     };

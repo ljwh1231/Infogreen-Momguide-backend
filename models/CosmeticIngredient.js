@@ -41,23 +41,23 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true
         },
-        breath: {
+        echaBreath: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        skin: {
+        echaSkin: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        dev: {
+        echaDev: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        cancer: {
+        echaCancer: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        eye: {
+        echaEye: {
             type: DataTypes.STRING,
             allowNull: true
         },
