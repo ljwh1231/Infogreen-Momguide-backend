@@ -9,5 +9,6 @@ module.exports = {
     mailchimpApiKey: 'MAILCHIMP_APIKEY',
     s3Bucket: 'S3_BUCKET_NAME',
     s3Url: 'S3_BUCKET_URL',
-    sendgridApiKey: 'SENDGRID_APIKEY'
+    sendgridApiKey: 'SENDGRID_APIKEY',
+    fromEmail: 'FROM_EMAIL'
 };
