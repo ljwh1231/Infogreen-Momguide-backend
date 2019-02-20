@@ -111,6 +111,7 @@ router.get('/details', (req, res) => {
             where: {'index': id}
         }).then((cosmeticResult) => {
             cosmeticResult.update({viewNum: cosmeticResult.dataValues.viewNum + 1});
+
             db.CosmeticIngredient.findAll({
                 include: [{
                     model: db.CosmeticDB,
