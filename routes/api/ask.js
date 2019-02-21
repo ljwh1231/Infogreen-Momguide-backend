@@ -186,7 +186,7 @@ router.delete('/cancelIngredOpen', (req, res) => {
         "unauthorized request": 권한 없는 사용자가 접근
     }
     > [
-        결과를 배열로 전달
+        결과를 배열로 전달(제품 정보 + 해당 제품을 성분 공개 요청한 사람 수도 numIngredOpen으로 추가됨)
       ]
 */
 router.get('/ingredOpen', (req, res) => {
@@ -210,8 +210,15 @@ router.get('/ingredOpen', (req, res) => {
                     where: {
                         index: result[i].dataValues.productIndex
                     }
-                }).then((resultFound) => {
-                    finalResult.push(resultFound.dataValues);
+                }).then(async (productInfo) => {
+                    await db.MemberToOpenRequest.findAndCountAll({
+                        where: {
+                            productIndex: productInfo.dataValues.index
+                        }
+                    }).then((countInfo) => {
+                        productInfo.dataValues.numIngredOpen = countInfo.count;
+                        finalResult.push(productInfo.dataValues);
+                    });
                 });
             }
 
@@ -222,6 +229,43 @@ router.get('/ingredOpen', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+    });
+});
+
+
+/*
+    > 해당 제품에 대해 성분 공개 요청한 사람들의 수
+    > GET /api/ask/countIngredOpen?productIndex=1
+    > req.query.productIndex에 해당 제품의 인덱스를 전달
+    > erro: {
+        "invalid request": 올바른 req가 전달되지 않음
+        "count error": 해당하는 정보의 수를 세는 데에 문제가 발생함
+    }
+    > {
+        totalNum: 사람 수
+      }
+*/
+router.get('/countIngredOpen', (req, res) => {
+    if (!req.query.productIndex) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+    }
+
+    db.MemberToOpenRequest.findAndCountAll({
+        where: {
+            productIndex: req.query.productIndex
+        }
+    }).then((result) => {
+        if (!result) {
+            res.status(424).json({
+                error: "count error"
+            });
+        } else {
+            res.json({
+                totalNum: result.count
+            });
+        }
     });
 });
 
