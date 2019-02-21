@@ -420,7 +420,7 @@ router.post('/login', (req, res) => {
                             nickName: result.nickName
                           };
                         const jwtSecret = config.jwtSecret;
-                        const options = {expiresIn: 60*60*24};
+                        const options = {expiresIn: 60*60*24*14};
                         
                         const token = jwt.sign(payload, jwtSecret, options);
                         
@@ -480,7 +480,7 @@ router.post('/refreshToken', (req, res) => {
                     nickName: result.nickName
                   };
                 const jwtSecret = config.jwtSecret;
-                const options = {expiresIn: 60*60*24};
+                const options = {expiresIn: 60*60*24*14};
                 
                 const token = jwt.sign(payload, jwtSecret, options);
 
