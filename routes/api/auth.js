@@ -165,7 +165,7 @@ router.post('/register', formidable(), (req, res) => {
 
     mailReq.post('https://' + config.mailchimpInstance + '.api.mailchimp.com/3.0/lists/' + config.mailchimpListId + '/members/')
         .set('Content-Type', 'application/json;charset=utf-8')
-        .set('', 'Basic ' + new Buffer('any:' + config.mailchimpApiKey ).toString('base64'))
+        .set('Authorization', 'Basic ' + new Buffer('any:' + config.mailchimpApiKey ).toString('base64'))
         .send({
           'email_address': infoObj.email,
           'status': (infoObj.mailed) ? 'subscribed' : 'unsubscribed'
