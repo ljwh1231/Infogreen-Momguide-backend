@@ -4,6 +4,8 @@ const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
 const jwt = require('jsonwebtoken');
 const formidable = require('express-formidable');
+const moment = require('moment');
+require('moment-timezone');
 
 const db = require("../../models/index");
 const config = require('../../config/config');
@@ -231,6 +233,7 @@ router.get('/ingredOpen', (req, res) => {
     > 선택정보: requestFile(요청 제품 사진. 유저가 업로드하지 않으면 그냥 보내지 않기.)
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
+          "not today anymore": 오늘 이미 요청을 보냈기 때문에 더 보낼 수 없음
           "invalid file(image only)": 전달된 파일이 이미지 파일이 아님
           "post add failed: 요청이 저장되지 않음
           "s3 store failed": s3 버켓 안에 이미지 저장 실패
@@ -251,6 +254,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
         Body: null
     };
 
+    moment.tz.setDefault("Asia/Seoul");
     reqObj = {};
 
     decodeToken(token).then((token) => {
@@ -266,64 +270,80 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
             });
         }
 
-        reqObj.memberIndex = token.index;
-        reqObj.title = req.fields.title;
-        reqObj.isCosmetic = req.fields.isCosmetic === 'true';
-        reqObj.requestContent = req.fields.requestContent;
-
+        const currentDate = moment().format('MMMM Do YYYY');
+        
         db.IngredientAnalysis.findAll({
             limit: 1,
-            where: {},
+            where: {
+                memberIndex: token.index
+            },
             order: [[ 'created_at', 'DESC' ]]
         }).then((result) => {
-            if (result.length === 0) {
-                nextIndex = 1;
+            if (result.length > 0 && (moment(result[0].dataValues.created_at).format('MMMM Do YYYY') === currentDate)) {
+                res.status(400).json({
+                    error: "not today anymore"
+                });
             } else {
-                nextIndex = result[0].dataValues.index + 1;
-            }
+                reqObj.memberIndex = token.index;
+                reqObj.title = req.fields.title;
+                reqObj.isCosmetic = req.fields.isCosmetic === 'true';
+                reqObj.requestContent = req.fields.requestContent;
 
-            if (!(typeof req.files.requestFile === 'undefined')) {
-                if (!(req.files.requestFile.type ===  'image/gif' 
-                        || req.files.requestFile.type === 'image/jpg' 
-                        || req.files.requestFile.type === 'image/png'
-                        || req.files.requestFile.type === 'image/jpeg')) {
-                    res.status(400).json({
-                        error: "invalid file(image only)"
-                    });
-                } else {
-                    params.Key = "ingredient-analysis-files/request-files/" + nextIndex.toString() + getExtension(req.files.requestFile.name);
-                    params.Body = require('fs').createReadStream(req.files.requestFile.path);   
-                }
-            } else {
-                params.Key = "NO";
-                params.Body = "NO";
-            }
-            
-            if (!(params.Key === "NO") && !(params.Key === "NO")) {
-                reqObj.requestFileUrl = config.s3Url + params.Key;
-            }
+                db.IngredientAnalysis.findAll({
+                    limit: 1,
+                    where: {},
+                    order: [[ 'created_at', 'DESC' ]]
+                }).then((result) => {
+                    if (result.length === 0) {
+                        nextIndex = 1;
+                    } else {
+                        nextIndex = result[0].dataValues.index + 1;
+                    }
 
-            db.IngredientAnalysis.create(reqObj).done((result) => {
-                if (!result) {
-                    res.status(424).json({
-                        error: "post add failed"
-                    });
-                } else {
+                    if (!(typeof req.files.requestFile === 'undefined')) {
+                        if (!(req.files.requestFile.type ===  'image/gif' 
+                                || req.files.requestFile.type === 'image/jpg' 
+                                || req.files.requestFile.type === 'image/png'
+                                || req.files.requestFile.type === 'image/jpeg')) {
+                            res.status(400).json({
+                                error: "invalid file(image only)"
+                            });
+                        } else {
+                            params.Key = "ingredient-analysis-files/request-files/" + nextIndex.toString() + getExtension(req.files.requestFile.name);
+                            params.Body = require('fs').createReadStream(req.files.requestFile.path);   
+                        }
+                    } else {
+                        params.Key = "NO";
+                        params.Body = "NO";
+                    }
+                    
                     if (!(params.Key === "NO") && !(params.Key === "NO")) {
-                        s3.putObject(params, (err, data) => {
-                            if (err) {
-                                res.status(424).json({
-                                    error: "s3 store failed"
+                        reqObj.requestFileUrl = config.s3Url + params.Key;
+                    }
+
+                    db.IngredientAnalysis.create(reqObj).done((result) => {
+                        if (!result) {
+                            res.status(424).json({
+                                error: "post add failed"
+                            });
+                        } else {
+                            if (!(params.Key === "NO") && !(params.Key === "NO")) {
+                                s3.putObject(params, (err, data) => {
+                                    if (err) {
+                                        res.status(424).json({
+                                            error: "s3 store failed"
+                                        });
+                                    } else {
+                                        res.json(result);
+                                    }
                                 });
                             } else {
                                 res.json(result);
                             }
-                        });
-                    } else {
-                        res.json(result);
-                    }
-                }
-            });
+                        }
+                    });
+                });
+            }
         });
 
     }).catch((error) => {
