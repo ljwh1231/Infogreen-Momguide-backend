@@ -2352,5 +2352,318 @@ router.put('/editOneToOne', formidable(), (req, res) => {
     });
 });
 
+/*
+    > 1:1 문의 삭제
+    > DELETE /api/auth/cancelOneToOne?index=1
+    > res.headers에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. 삭제하고자 하는 요청의 index를 req.query.index로 전달.
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such post": db에 해당 요청이 존재하지 않음
+          "s3 delete failed": s3 버켓 안의 파일 삭제 실패
+          "unauthorized request": 권한 없는 사용자가 접근 
+      }
+    > success: {
+        true: 성공적으로 삭제
+      }
+*/
+router.delete('/cancelOneToOne', (req, res) => {
+    let token = req.headers['authorization'];
+
+    const questionParams = {
+        Bucket: 'infogreenmomguide',
+        Key: null
+    };
+
+    const answerParams = {
+        Bucket: 'infogreenmomguide',
+        Key: null
+    };
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+        }
+
+        db.OneToOneQuestion.findOne({
+            where: {
+                index: req.query.index,
+                memberIndex: token.index
+            }
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such post"
+                });
+            } else {
+                if (result.dataValues.questionFileUrl !== null) {
+                    questionParams.Key = "one-to-one-question-files/question-files/" + req.query.index.toString() + getExtension(result.dataValues.questionFileUrl);
+                } else {
+                    questionParams.Key = "NO";
+                }
+
+                if (result.dataValues.answerFileUrl !== null) {
+                    answerParams.Key = "one-to-one-question-files/answer-files/" + req.query.index.toString() + getExtension(result.dataValues.answerFileUrl);
+                } else {
+                    answerParams.Key = "NO";
+                }
+
+                db.OneToOneQuestion.destroy({
+                    where: {
+                        index: req.query.index,
+                        memberIndex: token.index
+                    }
+                }).then((result) => {
+                    if (!result) {
+                        res.status(424).json({
+                            error: "no such post"
+                        });
+                    } else {
+                        if (questionParams.Key == "NO") {
+                            if (answerParams.Key == "NO") {
+                                res.json({
+                                    success: true
+                                });
+                            } else {
+                                s3.deleteObject(answerParams, (err, data) => {
+                                    if (err) {
+                                        res.status(424).json({
+                                            error: "s3 delete failed"
+                                        });
+                                    } else {
+                                        res.json({
+                                            success: true
+                                        });
+                                    }
+                                });
+                            }
+                        } else {
+                            s3.deleteObject(questionParams, (err, data) => {
+                                if (err) {
+                                    res.status(424).json({
+                                        error: "s3 delete failed"
+                                    });
+                                } else {
+                                    if (answerParams.Key == "NO") {
+                                        res.json({
+                                            success: true
+                                        });
+                                    } else {
+                                        s3.deleteObject(answerParams, (err, data) => {
+                                            if (err) {
+                                                res.status(424).json({
+                                                    error: "s3 delete failed"
+                                                });
+                                            } else {
+                                                res.json({
+                                                    success: true
+                                                });
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+    });
+});
+
+/*
+    > 1:1 문의 불러오기
+    > GET /api/auth/oneToOne
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
+    > []: 빈 배열. 검색 결과 없음.
+      error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
+    > [
+        결과를 배열로 전달
+      ]
+*/
+router.get('/oneToOne', (req, res) => {
+    let token = req.headers['authorization'];
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+        }
+
+        db.OneToOneQuestion.findAll({
+            where: {
+                memberIndex: token.index
+            }
+        }).then((result) => {
+            res.json(result);
+        });
+
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+    });
+});
+
+/*
+    > admin이 유저가 요청한 1:1 문의에 답변을 작성/수정(새로 작성하는 경우나 수정하는 경우 동일하므로 api 통일.)
+    > PUT /api/auth/answerOneToOne?index=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. form data로 데이터 전달. 각 데이터의 이름은 디비와 통일. 수정하고자 하는 문의의 index를 req.query.index로 전달
+    > 필수정보: answerContent(답변 내용)
+    > 선택정보: answerFile(admin이 답변과 함께 첨부하는 파일. 업로드하지 않으면 그냥 보내지 않기, 파일이 있었는데 없애는 경우에도 보내지 않기)
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such post": 해당 요청은 존재하지 않음
+          "s3 store failed": s3 버켓 안에 이미지 저장 실패
+          "s3 delete failed": s3 버켓 안의 이미지 삭제 실패
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
+    > success: {
+        true: 성공적으로 변경
+      }
+*/
+router.put('/answerOneToOne', formidable(), (req, res) => {
+    let token = req.headers['authorization'];
+    const ansObj = {};
+
+    const addParams = {
+        Bucket: 'infogreenmomguide',
+        Key: null,
+        ACL: 'public-read',
+        Body: null
+    };
+
+    const deleteParams = {
+        Bucket: 'infogreenmomguide',
+        Key: null
+    };
+
+    decodeToken(token).then((token) => {
+        
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+        }
+
+        if (token.index !== 1) {
+            res.status(403).json({
+                error: "unauthorized request"
+            });
+        }
+
+        if (!req.fields.answerContent || !req.query.index) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+        }
+
+        ansObj.answerContent = req.fields.answerContent;
+
+        db.OneToOneQuestion.findOne({
+            where: {
+                index: req.query.index
+            }
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such post"
+                });
+            } else {
+                if (!(typeof req.files.answerFile === 'undefined')) {
+                    addParams.Key = "one-to-one-question-files/answer-files/" + req.query.index.toString() + getExtension(req.files.answerFile.name);
+                    addParams.Body = require('fs').createReadStream(req.files.answerFile.path);
+                    ansObj.answerFileUrl = config.s3Url + addParams.Key;
+                } else {
+                    addParams.Key = "NO";
+                    addParams.Body = "NO";
+                    ansObj.answerFileUrl = null;
+                }
+
+                if (result.dataValues.answerFileUrl !== null) {
+                    deleteParams.Key = "one-to-one-question-files/answer-files/" + req.query.index.toString() + getExtension(result.dataValues.answerFileUrl);
+                } else {
+                    deleteParams.Key = "NO";
+                }
+
+                db.OneToOneQuestion.update(
+                    ansObj,
+                    {
+                        where: {
+                            index: req.query.index
+                        }
+                    }
+                ).then((result) => {
+                    if (!result) {
+                        res.status(424).json({
+                            error: "no such post"
+                        });
+                    } else {
+                        if (deleteParams.Key === 'NO') {
+                            if (addParams.Key === 'NO' && addParams.Body === 'NO') {
+                                res.json({
+                                    success: true
+                                });
+                            } else {
+                                s3.putObject(addParams, (err, data) => {
+                                    if (err) {
+                                        res.status(424).json({
+                                            error: "s3 store failed"
+                                        });
+                                    } else {
+                                        res.json({
+                                            success: true
+                                        });
+                                    }
+                                });
+                            }
+                        } else {
+                            s3.deleteObject(deleteParams, (err, data) => {
+                                if (err) {
+                                    res.status(424).json({
+                                        error: "s3 delete failed"
+                                    });
+                                } else {
+                                    if (!(addParams.Key === 'NO' && addParams.Body === 'NO')) {
+                                        s3.putObject(addParams, (err, data) => {
+                                            if (err) {
+                                                res.status(424).json({
+                                                    error: "s3 store failed"
+                                                });
+                                            } else {
+                                                res.json({
+                                                    success: true
+                                                });
+                                            }
+                                        });
+                                    } else {
+                                        res.json({
+                                            success: true
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+    });
+});
 
 module.exports = router;
