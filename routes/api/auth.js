@@ -24,6 +24,7 @@ function decodeToken(token) {
         res.status(400).json({
             error: "invalid request"
         })
+        return;
     }
 
     token = token.substring(7);
@@ -109,7 +110,9 @@ router.post('/register', formidable(), (req, res) => {
             
         res.status(400).json({
             error: "invalid request"
-        });    }
+        });
+        return;
+    }
 
     infoObj.email = req.fields.email;
 
@@ -117,6 +120,7 @@ router.post('/register', formidable(), (req, res) => {
         res.status(412).json({
             error: "precondition unsatisfied"
         });
+        return;
     }
 
     infoObj.nickName = req.fields.nickName;
@@ -132,6 +136,7 @@ router.post('/register', formidable(), (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         } else {
             infoObj.childBirthYear = Number(req.fields.childBirthYear);
             infoObj.childBirthMonth = Number(req.fields.childBirthMonth);
@@ -175,13 +180,15 @@ router.post('/register', formidable(), (req, res) => {
                     if (err) {
                         res.status(424).json({
                             error: "salt generation failed"
-                        })
+                        });
+                        return;
                     } else {
                         bcrypt.hash(req.fields.password, salt, null, (err, hash) => {
                             if (err) {
                                 res.status(424).json({
                                     error: "hash generation failed"
                                 })
+                                return;
                             } else {
                                 infoObj.password = hash;
             
@@ -193,6 +200,7 @@ router.post('/register', formidable(), (req, res) => {
                                         res.status(400).json({
                                             error: "invalid file(image only)"
                                         });
+                                        return;
                                     } else {
                                         params.Key = "profile-images/" + infoObj.email + getExtension(req.files.image.name);
                                         params.Body = require('fs').createReadStream(req.files.image.path);
@@ -201,6 +209,7 @@ router.post('/register', formidable(), (req, res) => {
                                     res.status(400).json({
                                         error: "no file input"
                                     });
+                                    return;
                                 }
 
                                 s3.putObject(params, function(err, data) {
@@ -208,6 +217,7 @@ router.post('/register', formidable(), (req, res) => {
                                         res.status(424).json({
                                             error: "s3 store failed"
                                         });
+                                        return;
                                     } else {
                                         infoObj.photoUrl = config.s3Url + params.Key;
                                         db.MemberInfo.create(
@@ -217,9 +227,11 @@ router.post('/register', formidable(), (req, res) => {
                                                 res.status(424).json({
                                                     error: "member creation failed"
                                                 });
+                                                return;
                                             }
                                             else {
                                                 res.json(result);
+                                                return;
                                             }
                                         });
                                     }
@@ -232,6 +244,7 @@ router.post('/register', formidable(), (req, res) => {
                 res.status(400).json({
                     error: "invalid request"
                 });
+                return;
             }
         });
 });
@@ -255,6 +268,7 @@ router.get('/register/checkEmail', (req, res) => {
         res.status(400).json({
             error: "invalid request"
         });
+        return;
     }
 
     db.MemberInfo.findOne({
@@ -264,10 +278,12 @@ router.get('/register/checkEmail', (req, res) => {
             res.json({
                 isDuplicated: false
             });
+            return;
         } else {
             res.json({
                 isDuplicated: true
             });
+            return;
         }
     })
 });
@@ -291,6 +307,7 @@ router.get('/register/checkNickName', (req, res) => {
         res.status(400).json({
             error: "invalid request"
         });
+        return;
     }
 
     db.MemberInfo.findOne({
@@ -300,10 +317,12 @@ router.get('/register/checkNickName', (req, res) => {
             res.json({
                 isDuplicated: false
             });
+            return;
         } else {
             res.json({
                 isDuplicated: true
             });
+            return;
        }
     })
 });
@@ -329,6 +348,7 @@ router.get('/editProfile/checkPassword', (req, res) => {
         res.status(400).json({
             error: "invalid request"
         });
+        return;
     }
 
     decodeToken(token).then((token) => {
@@ -336,6 +356,7 @@ router.get('/editProfile/checkPassword', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberInfo.findOne({
@@ -348,7 +369,8 @@ router.get('/editProfile/checkPassword', (req, res) => {
             if (!result) {
                 res.status(424).json({
                     error: "no info"
-                })
+                });
+                return;
             } else {
                 bcrypt.compare(req.query.password, result.password, (err, bcryptResult) => {
                     if (err) {
@@ -358,10 +380,12 @@ router.get('/editProfile/checkPassword', (req, res) => {
                             res.json({
                                 success: bcryptResult
                             });
+                            return;
                         } else {
                             res.status(403).json({
                                 error: "incorrect password"
                             });
+                            return;
                         }
                     }
                 });
@@ -372,6 +396,7 @@ router.get('/editProfile/checkPassword', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     })
 });
 
@@ -395,6 +420,7 @@ router.post('/login', (req, res) => {
         res.status(400).json({
             error: "invalid request"
         });
+        return;
     }
 
     db.MemberInfo.findOne({
@@ -406,12 +432,14 @@ router.post('/login', (req, res) => {
             res.status(424).json({
                 error: "no member"
             });
+            return;
         } else { 
             bcrypt.compare(req.body.password, result.password, (err, bcryptResult) => {
                 if (err) {
                     res.status(424).json({
                         error: "hash comparison failed"
                     });
+                    return;
                 } else {
                     if (bcryptResult) {
                         const payload = {
@@ -427,11 +455,13 @@ router.post('/login', (req, res) => {
                         res.json({
                             token: token
                         });
+                        return;
 
                     } else {
                         res.status(403).json({
                             error: "incorrect password"
                         });
+                        return;
                     }
                 }
             });
@@ -460,6 +490,7 @@ router.post('/refreshToken', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberInfo.findOne({
@@ -473,6 +504,7 @@ router.post('/refreshToken', (req, res) => {
                 res.status(424).json({
                     error: "no such member"
                 });
+                return;
             } else {
                 const payload = {
                     index: result.index,
@@ -487,6 +519,7 @@ router.post('/refreshToken', (req, res) => {
                 res.json({
                     token: token
                 });
+                return;
             }
         });
         
@@ -494,6 +527,7 @@ router.post('/refreshToken', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     })
 });
 
@@ -518,6 +552,7 @@ router.get('/info', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
         
         db.MemberInfo.findOne({
@@ -531,14 +566,17 @@ router.get('/info', (req, res) => {
                 res.status(424).json({
                     error: "no info"
                 });
+                return;
             } else {
                 res.json(result);
+                return;
             }
         });
     }).catch((error) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     })
 });
 
@@ -567,6 +605,7 @@ router.post('/addHomeCosmetic', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberToHome.create({
@@ -578,18 +617,21 @@ router.post('/addHomeCosmetic', (req, res) => {
                 res.status(424).json({
                     error: "product add failed"
                 });
+                return;
             }
             else {
                 res.json({
                     success: true
                 });
+                return;
             }
         });
 
     }).catch((error) => {
         res.status(403).json({
-
+            error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -614,6 +656,7 @@ router.post('/addHomeLiving', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberToHome.create({
@@ -625,11 +668,13 @@ router.post('/addHomeLiving', (req, res) => {
                 res.status(424).json({
                     error: "product add failed"
                 });
+                return;
             }
             else {
                 res.json({
                     success: true
                 });
+                return;
             }
         });
 
@@ -637,6 +682,7 @@ router.post('/addHomeLiving', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -662,6 +708,7 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberToHome.destroy({
@@ -674,12 +721,14 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
             if (!result) {
                 res.status(424).json({
                     error: "no such product"
-                })
+                });
+                return;
             }
             else {
                 res.json({
                     success: true
                 });
+                return;
             }
         });
 
@@ -687,6 +736,7 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -712,6 +762,7 @@ router.delete('/cancelHomeLiving', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberToHome.destroy({
@@ -724,12 +775,14 @@ router.delete('/cancelHomeLiving', (req, res) => {
             if (!result) {
                 res.status(424).json({
                     error: "no such product"
-                })
+                });
+                return;
             }
             else {
                 res.json({
                     success: true
                 });
+                return;
             }
         });
 
@@ -737,6 +790,7 @@ router.delete('/cancelHomeLiving', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -762,6 +816,7 @@ router.post('/addLikeCosmetic', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberToLike.create({
@@ -773,11 +828,13 @@ router.post('/addLikeCosmetic', (req, res) => {
                 res.status(424).json({
                     error: "product add failed"
                 });
+                return;
             }
             else {
                 res.json({
                     success: true
                 });
+                return;
             }
         });
 
@@ -785,6 +842,7 @@ router.post('/addLikeCosmetic', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -809,6 +867,7 @@ router.post('/addLikeLiving', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberToLike.create({
@@ -820,11 +879,13 @@ router.post('/addLikeLiving', (req, res) => {
                 res.status(424).json({
                     error: "product add failed"
                 });
+                return;
             }
             else {
                 res.json({
                     success: true
                 });
+                return;
             }
         });
 
@@ -832,6 +893,7 @@ router.post('/addLikeLiving', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -857,6 +919,7 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberToLike.destroy({
@@ -869,12 +932,14 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
             if (!result) {
                 res.status(424).json({
                     error: "no such product"
-                })
+                });
+                return;
             }
             else {
                 res.json({
                     success: true
                 });
+                return;
             }
         });
 
@@ -882,6 +947,7 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -907,6 +973,7 @@ router.delete('/cancelLikeLiving', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberToLike.destroy({
@@ -919,12 +986,14 @@ router.delete('/cancelLikeLiving', (req, res) => {
             if (!result) {
                 res.status(424).json({
                     error: "no such product"
-                })
+                });
+                return;
             }
             else {
                 res.json({
                     success: true
                 });
+                return;
             }
         });
 
@@ -932,6 +1001,7 @@ router.delete('/cancelLikeLiving', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -965,6 +1035,7 @@ router.get('/homeProduct', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberToHome.findAll({
@@ -974,9 +1045,11 @@ router.get('/homeProduct', (req, res) => {
         }).then((result) => {
             if (!result) {
                 res.json([]);
+                return;
             } else {
                 findProduct(result).then((finalResult) => {
                     res.json(finalResult);
+                    return;
                 });
             }
         });
@@ -984,6 +1057,7 @@ router.get('/homeProduct', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     })
 });
 
@@ -1009,6 +1083,7 @@ router.get('/likeProduct', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberToLike.findAll({
@@ -1018,9 +1093,11 @@ router.get('/likeProduct', (req, res) => {
         }).then((result) => {
             if (!result) {
                 res.json([]);
+                return;
             } else {
                 findProduct(result).then((finalResult) => {
                     res.json(finalResult);
+                    return;
                 });
             }
         });
@@ -1028,6 +1105,7 @@ router.get('/likeProduct', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -1053,6 +1131,7 @@ router.get('/checkHomeLike', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         const isCosmetic = req.query.isCosmetic === 'true';
@@ -1084,6 +1163,7 @@ router.get('/checkHomeLike', (req, res) => {
                 }
 
                 res.json(finalResult);
+                return;
             });
         });
 
@@ -1091,6 +1171,7 @@ router.get('/checkHomeLike', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -1121,6 +1202,7 @@ router.post('/requestPassword', (req, res) => {
             res.status(403).json({
                 error: "incorrect email"
             });
+            return;
         } else {
             
             const payload = {
@@ -1145,6 +1227,7 @@ router.post('/requestPassword', (req, res) => {
             res.json({
                 token: token
             });
+            return;
         }
     });
 });
@@ -1172,19 +1255,22 @@ router.put('/editProfile/resetPassword', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
         
         bcrypt.genSalt(10, (err, salt) => {
             if (err) {
                 res.status(424).json({
                     error: "salt generation failed"
-                })
+                });
+                return;
             } else {
                 bcrypt.hash(req.body.password, salt, null, (err, hash) => {
                     if (err) {
                         res.status(424).json({
                             error: "hash generation failed"
-                        })
+                        });
+                        return;
                     } else {
     
                         db.MemberInfo.update({
@@ -1199,10 +1285,12 @@ router.put('/editProfile/resetPassword', (req, res) => {
                                 res.status(424).json({
                                     error: "update failed"
                                 });
+                                return;
                             } else {
                                 res.json({
                                     success: true
                                 });
+                                return;
                             }
                         });
                     }
@@ -1214,6 +1302,7 @@ router.put('/editProfile/resetPassword', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -1256,6 +1345,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
         res.status(400).json({
             error: "invalid request"
         });
+        return;
     }
 
     const infoObj = {};
@@ -1265,8 +1355,12 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
         
+        const index = token.index;
+        const email = token.email;
+
         infoObj.nickName = req.fields.nickName;
         infoObj.gender = req.fields.gender;
         infoObj.memberBirthYear = Number(req.fields.memberBirthYear);
@@ -1281,6 +1375,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                 res.status(400).json({
                     error: "invalid request"
                 });
+                return;
             } else {
                 infoObj.childBirthYear = Number(req.fields.childBirthYear);
                 infoObj.childBirthMonth = Number(req.fields.childBirthMonth);
@@ -1333,7 +1428,8 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
             if (!result) {
                 res.status(424).json({
                     error: "no info"
-                })
+                });
+                return;
             } else {
                 if (!isImageChanged) {
                     db.MemberInfo.update(
@@ -1348,13 +1444,14 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                             res.status(424).json({
                                 error: "update failed"
                             });
+                            return;
                         }
                         else {
                             const payload = {
-                                index: result.index,
-                                email: result.email,
-                                nickName: result.nickName
-                              };
+                                index: index,
+                                email: email,
+                                nickName: infoObj.nickName
+                            };
                             const jwtSecret = config.jwtSecret;
                             const options = {expiresIn: 60*60*24*14};
                             
@@ -1363,6 +1460,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                             res.json({
                                 token: token
                             });
+                            return;
                         }
                     });
                 } else {
@@ -1372,12 +1470,14 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                             res.status(424).json({
                                 error: "s3 delete failed"
                             });
+                            return;
                         } else {
                             s3.putObject(addParams, (err, data) => {
                                 if (err) {
                                     res.status(424).json({
                                         error: "s3 store failed"
                                     });
+                                    return;
                                 } else {
                                     if (!(addParams.Key === "NO") && !(addParams.Key === "NO")) {
                                         infoObj.photoUrl = "https://s3.ap-northeast-2.amazonaws.com/infogreenmomguide/" + addParams.Key;
@@ -1394,13 +1494,14 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                                             res.status(424).json({
                                                 error: "update failed"
                                             });
+                                            return;
                                         }
                                         else {
                                             const payload = {
-                                                index: result.index,
-                                                email: result.email,
-                                                nickName: result.nickName
-                                              };
+                                                index: index,
+                                                email: email,
+                                                nickName: infoObj.nickName
+                                            };
                                             const jwtSecret = config.jwtSecret;
                                             const options = {expiresIn: 60*60*24*14};
                                             
@@ -1409,6 +1510,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                                             res.json({
                                                 token: token
                                             });
+                                            return;
                                         }
                                     });
                                 }
@@ -1423,6 +1525,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     })
 });
 

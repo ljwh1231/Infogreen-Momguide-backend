@@ -22,7 +22,8 @@ function decodeToken(token) {
     if (!token) {
         res.status(400).json({
             error: "invalid request"
-        })
+        });
+        return;
     }
 
     token = token.substring(7);
@@ -65,6 +66,7 @@ router.post('/requestIngredOpen', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.LivingDB.findOne({
@@ -75,12 +77,14 @@ router.post('/requestIngredOpen', (req, res) => {
             if (!result) {
                 res.status(424).json({
                     error: "no product"
-                })
+                });
+                return;
             } else {
                 if (result.dataValues.ingredient === 'O') {
                     res.status(400).json({
                         error: "already open"
-                    })
+                    });
+                    return;
                 } else {
                     db.MemberToOpenRequest.create({
                         memberIndex: token.index,
@@ -90,11 +94,13 @@ router.post('/requestIngredOpen', (req, res) => {
                             res.status(424).json({
                                 error: "product add failed"
                             });
+                            return;
                         }
                         else {
                             res.json({
                                 success: true
                             });
+                            return;
                         }
                     });
                 }
@@ -105,6 +111,7 @@ router.post('/requestIngredOpen', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -130,12 +137,14 @@ router.delete('/cancelIngredOpen', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         if (token.index !== 1) {
             res.status(403).json({
                 error: "unauthorized request"
             });
+            return;
         }
 
         db.MemberToOpenRequest.destroy({
@@ -146,7 +155,8 @@ router.delete('/cancelIngredOpen', (req, res) => {
             if (!result) {
                 res.status(424).json({
                     error: "no product"
-                })
+                });
+                return;
             }
             else {
                 db.LivingDB.update({
@@ -160,11 +170,13 @@ router.delete('/cancelIngredOpen', (req, res) => {
                     if (!result) {
                         res.status(424).json({
                             error: "update failure"
-                        })
+                        });
+                        return;
                     } else {
                         res.json({
                             success: true
                         });
+                        return;
                     }
                 });
             }
@@ -174,6 +186,7 @@ router.delete('/cancelIngredOpen', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -198,6 +211,7 @@ router.get('/ingredOpen', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.MemberToOpenRequest.findAll({
@@ -223,12 +237,14 @@ router.get('/ingredOpen', (req, res) => {
             }
 
             res.json(finalResult);
+            return;
         });
 
     }).catch((error) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -250,6 +266,7 @@ router.get('/countIngredOpen', (req, res) => {
         res.status(400).json({
             error: "invalid request"
         });
+        return;
     }
 
     db.MemberToOpenRequest.findAndCountAll({
@@ -261,10 +278,12 @@ router.get('/countIngredOpen', (req, res) => {
             res.status(424).json({
                 error: "count error"
             });
+            return;
         } else {
             res.json({
                 totalNum: result.count
             });
+            return;
         }
     });
 });
@@ -306,12 +325,14 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         if (!req.fields.title || !req.fields.isCosmetic || !req.fields.requestContent) {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         const currentDate = moment().format('MMMM Do YYYY');
@@ -327,6 +348,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
                 res.status(400).json({
                     error: "not today anymore"
                 });
+                return;
             } else {
                 reqObj.memberIndex = token.index;
                 reqObj.title = req.fields.title;
@@ -352,6 +374,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
                             res.status(400).json({
                                 error: "invalid file(image only)"
                             });
+                            return;
                         } else {
                             params.Key = "ingredient-analysis-files/request-files/" + nextIndex.toString() + getExtension(req.files.requestFile.name);
                             params.Body = require('fs').createReadStream(req.files.requestFile.path);   
@@ -370,6 +393,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
                             res.status(424).json({
                                 error: "post add failed"
                             });
+                            return;
                         } else {
                             if (!(params.Key === "NO") && !(params.Key === "NO")) {
                                 s3.putObject(params, (err, data) => {
@@ -377,12 +401,15 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
                                         res.status(424).json({
                                             error: "s3 store failed"
                                         });
+                                        return;
                                     } else {
                                         res.json(result);
+                                        return;
                                     }
                                 });
                             } else {
                                 res.json(result);
+                                return;
                             }
                         }
                     });
@@ -394,6 +421,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -436,6 +464,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.IngredientAnalysis.findOne({
@@ -448,16 +477,19 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
                 res.status(424).json({
                     error: "no such post"
                 });
+                return;
             } else {
                 if (result.dataValues.responseContent !== null) {
                     res.status(424).json({
                         error: "already responsed"
                     });
+                    return;
                 } else {
                     if (!req.fields.title || !req.fields.isCosmetic || !req.fields.requestContent) {
                         res.status(400).json({
                             error: "invalid request"
                         });
+                        return;
                     }
 
                     reqObj.title = req.fields.title;
@@ -472,6 +504,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
                             res.status(400).json({
                                 error: "invalid file(image only)"
                             });
+                            return;
                         } else {
                             addParams.Key = "ingredient-analysis-files/request-files/" + req.query.index.toString() + getExtension(req.files.requestFile.name);
                             addParams.Body = require('fs').createReadStream(req.files.requestFile.path);
@@ -503,16 +536,19 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
                                 res.json({
                                     success: true
                                 });
+                                return;
                             } else {
                                 s3.putObject(addParams, (err, data) => {
                                     if (err) {
                                         res.status(424).json({
                                             error: "s3 store failed"
                                         });
+                                        return;
                                     } else {
                                         res.json({
                                             success: true
                                         });
+                                        return;
                                     }
                                 });
                             }
@@ -522,21 +558,25 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
                                     res.status(424).json({
                                         error: "s3 delete failed"
                                     });
+                                    return;
                                 } else {
                                     if (addParams.Key === 'NO') {
                                         res.json({
                                             success: true
                                         });
+                                        return;
                                     } else {
                                         s3.putObject(addParams, (err, data) => {
                                             if (err) {
                                                 res.status(424).json({
                                                     error: "s3 store failed"
                                                 });
+                                                return;
                                             } else {
                                                 res.json({
                                                     success: true
                                                 });
+                                                return;
                                             }
                                         });
                                     }
@@ -552,6 +592,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -587,6 +628,7 @@ router.delete('/cancelIngredAnal', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.IngredientAnalysis.findOne({
@@ -599,6 +641,7 @@ router.delete('/cancelIngredAnal', (req, res) => {
                 res.status(424).json({
                     error: "no such post"
                 });
+                return;
             } else {
                 if (result.dataValues.requestFileUrl !== null) {
                     requestParams.Key = "ingredient-analysis-files/request-files/" + req.query.index.toString() + getExtension(result.dataValues.requestFileUrl);
@@ -622,22 +665,26 @@ router.delete('/cancelIngredAnal', (req, res) => {
                         res.status(424).json({
                             error: "no such post"
                         });
+                        return;
                     } else {
                         if (requestParams.Key == "NO") {
                             if (responseParams.Key == "NO") {
                                 res.json({
                                     success: true
                                 });
+                                return;
                             } else {
                                 s3.deleteObject(responseParams, (err, data) => {
                                     if (err) {
                                         res.status(424).json({
                                             error: "s3 delete failed"
                                         });
+                                        return;
                                     } else {
                                         res.json({
                                             success: true
                                         });
+                                        return;
                                     }
                                 });
                             }
@@ -647,21 +694,25 @@ router.delete('/cancelIngredAnal', (req, res) => {
                                     res.status(424).json({
                                         error: "s3 delete failed"
                                     });
+                                    return;
                                 } else {
                                     if (responseParams.Key == "NO") {
                                         res.json({
                                             success: true
                                         });
+                                        return;
                                     } else {
                                         s3.deleteObject(responseParams, (err, data) => {
                                             if (err) {
                                                 res.status(424).json({
                                                     error: "s3 delete failed"
                                                 });
+                                                return;
                                             } else {
                                                 res.json({
                                                     success: true
                                                 });
+                                                return;
                                             }
                                         });
                                     }
@@ -677,6 +728,7 @@ router.delete('/cancelIngredAnal', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -701,6 +753,7 @@ router.get('/ingredAnal', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.IngredientAnalysis.findAll({
@@ -709,12 +762,14 @@ router.get('/ingredAnal', (req, res) => {
             }
         }).then((result) => {
             res.json(result);
+            return;
         });
 
     }).catch((error) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -757,18 +812,21 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         if (token.index !== 1) {
             res.status(403).json({
                 error: "unauthorized request"
             });
+            return;
         }
 
         if (!req.fields.responseContent || !req.query.index) {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         resObj.responseContent = req.fields.responseContent;
@@ -782,6 +840,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
                 res.status(424).json({
                     error: "no such post"
                 });
+                return;
             } else {
                 if (!(typeof req.files.responseFile === 'undefined')) {
                     addParams.Key = "ingredient-analysis-files/response-files/" + req.query.index.toString() + getExtension(req.files.responseFile.name);
@@ -811,22 +870,26 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
                         res.status(424).json({
                             error: "no such post"
                         });
+                        return;
                     } else {
                         if (deleteParams.Key === 'NO') {
                             if (addParams.Key === 'NO' && addParams.Body === 'NO') {
                                 res.json({
                                     success: true
                                 });
+                                return;
                             } else {
                                 s3.putObject(addParams, (err, data) => {
                                     if (err) {
                                         res.status(424).json({
                                             error: "s3 store failed"
                                         });
+                                        return;
                                     } else {
                                         res.json({
                                             success: true
                                         });
+                                        return;
                                     }
                                 });
                             }
@@ -836,6 +899,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
                                     res.status(424).json({
                                         error: "s3 delete failed"
                                     });
+                                    return;
                                 } else {
                                     if (!(addParams.Key === 'NO' && addParams.Body === 'NO')) {
                                         s3.putObject(addParams, (err, data) => {
@@ -843,16 +907,19 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
                                                 res.status(424).json({
                                                     error: "s3 store failed"
                                                 });
+                                                return;
                                             } else {
                                                 res.json({
                                                     success: true
                                                 });
+                                                return;
                                             }
                                         });
                                     } else {
                                         res.json({
                                             success: true
                                         });
+                                        return;
                                     }
                                 }
                             });
@@ -866,6 +933,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -904,12 +972,14 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         if (!req.fields.questionContent) {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         queObj.memberIndex = token.index;
@@ -934,6 +1004,7 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
                     res.status(400).json({
                         error: "invalid file(image only)"
                     });
+                    return;
                 } else {
                     params.Key = "one-to-one-question-files/question-files/" + nextIndex.toString() + getExtension(req.files.questionFile.name);
                     params.Body = require('fs').createReadStream(req.files.questionFile.path);   
@@ -952,6 +1023,7 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
                     res.status(424).json({
                         error: "post add failed"
                     });
+                    return;
                 } else {
                     if (!(params.Key === "NO") && !(params.Key === "NO")) {
                         s3.putObject(params, (err, data) => {
@@ -959,12 +1031,15 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
                                 res.status(424).json({
                                     error: "s3 store failed"
                                 });
+                                return;
                             } else {
                                 res.json(result);
+                                return;
                             }
                         });
                     } else {
                         res.json(result);
+                        return;
                     }
                 }
             });
@@ -974,6 +1049,7 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -1016,6 +1092,7 @@ router.put('/editOneToOne', formidable(), (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.OneToOneQuestion.findOne({
@@ -1028,16 +1105,19 @@ router.put('/editOneToOne', formidable(), (req, res) => {
                 res.status(424).json({
                     error: "no such post"
                 });
+                return;
             } else {
                 if (result.dataValues.answerContent !== null) {
                     res.status(424).json({
                         error: "already answered"
                     });
+                    return;
                 } else {
                     if (!req.fields.title || !req.fields.questionContent) {
                         res.status(400).json({
                             error: "invalid request"
                         });
+                        return;
                     }
 
                     queObj.title = req.fields.title;
@@ -1051,6 +1131,7 @@ router.put('/editOneToOne', formidable(), (req, res) => {
                             res.status(400).json({
                                 error: "invalid file(image only)"
                             });
+                            return;
                         } else {
                             addParams.Key = "one-to-one-question-files/question-files/" + req.query.index.toString() + getExtension(req.files.questionFile.name);
                             addParams.Body = require('fs').createReadStream(req.files.questionFile.path);
@@ -1082,16 +1163,19 @@ router.put('/editOneToOne', formidable(), (req, res) => {
                                 res.json({
                                     success: true
                                 });
+                                return;
                             } else {
                                 s3.putObject(addParams, (err, data) => {
                                     if (err) {
                                         res.status(424).json({
                                             error: "s3 store failed"
                                         });
+                                        return;
                                     } else {
                                         res.json({
                                             success: true
                                         });
+                                        return;
                                     }
                                 });
                             }
@@ -1101,21 +1185,25 @@ router.put('/editOneToOne', formidable(), (req, res) => {
                                     res.status(424).json({
                                         error: "s3 delete failed"
                                     });
+                                    return;
                                 } else {
                                     if (addParams.Key === 'NO') {
                                         res.json({
                                             success: true
                                         });
+                                        return;
                                     } else {
                                         s3.putObject(addParams, (err, data) => {
                                             if (err) {
                                                 res.status(424).json({
                                                     error: "s3 store failed"
                                                 });
+                                                return;
                                             } else {
                                                 res.json({
                                                     success: true
                                                 });
+                                                return;
                                             }
                                         });
                                     }
@@ -1131,6 +1219,7 @@ router.put('/editOneToOne', formidable(), (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -1166,6 +1255,7 @@ router.delete('/cancelOneToOne', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.OneToOneQuestion.findOne({
@@ -1178,6 +1268,7 @@ router.delete('/cancelOneToOne', (req, res) => {
                 res.status(424).json({
                     error: "no such post"
                 });
+                return;
             } else {
                 if (result.dataValues.questionFileUrl !== null) {
                     questionParams.Key = "one-to-one-question-files/question-files/" + req.query.index.toString() + getExtension(result.dataValues.questionFileUrl);
@@ -1201,22 +1292,26 @@ router.delete('/cancelOneToOne', (req, res) => {
                         res.status(424).json({
                             error: "no such post"
                         });
+                        return;
                     } else {
                         if (questionParams.Key == "NO") {
                             if (answerParams.Key == "NO") {
                                 res.json({
                                     success: true
                                 });
+                                return;
                             } else {
                                 s3.deleteObject(answerParams, (err, data) => {
                                     if (err) {
                                         res.status(424).json({
                                             error: "s3 delete failed"
                                         });
+                                        return;
                                     } else {
                                         res.json({
                                             success: true
                                         });
+                                        return;
                                     }
                                 });
                             }
@@ -1226,21 +1321,25 @@ router.delete('/cancelOneToOne', (req, res) => {
                                     res.status(424).json({
                                         error: "s3 delete failed"
                                     });
+                                    return;
                                 } else {
                                     if (answerParams.Key == "NO") {
                                         res.json({
                                             success: true
                                         });
+                                        return;
                                     } else {
                                         s3.deleteObject(answerParams, (err, data) => {
                                             if (err) {
                                                 res.status(424).json({
                                                     error: "s3 delete failed"
                                                 });
+                                                return;
                                             } else {
                                                 res.json({
                                                     success: true
                                                 });
+                                                return;
                                             }
                                         });
                                     }
@@ -1256,6 +1355,7 @@ router.delete('/cancelOneToOne', (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -1280,6 +1380,7 @@ router.get('/oneToOne', (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         db.OneToOneQuestion.findAll({
@@ -1288,12 +1389,14 @@ router.get('/oneToOne', (req, res) => {
             }
         }).then((result) => {
             res.json(result);
+            return;
         });
 
     }).catch((error) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
@@ -1336,18 +1439,21 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         if (token.index !== 1) {
             res.status(403).json({
                 error: "unauthorized request"
             });
+            return;
         }
 
         if (!req.fields.answerContent || !req.query.index) {
             res.status(400).json({
                 error: "invalid request"
             });
+            return;
         }
 
         ansObj.answerContent = req.fields.answerContent;
@@ -1361,6 +1467,7 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
                 res.status(424).json({
                     error: "no such post"
                 });
+                return;
             } else {
                 if (!(typeof req.files.answerFile === 'undefined')) {
                     addParams.Key = "one-to-one-question-files/answer-files/" + req.query.index.toString() + getExtension(req.files.answerFile.name);
@@ -1390,22 +1497,26 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
                         res.status(424).json({
                             error: "no such post"
                         });
+                        return;
                     } else {
                         if (deleteParams.Key === 'NO') {
                             if (addParams.Key === 'NO' && addParams.Body === 'NO') {
                                 res.json({
                                     success: true
                                 });
+                                return;
                             } else {
                                 s3.putObject(addParams, (err, data) => {
                                     if (err) {
                                         res.status(424).json({
                                             error: "s3 store failed"
                                         });
+                                        return;
                                     } else {
                                         res.json({
                                             success: true
                                         });
+                                        return;
                                     }
                                 });
                             }
@@ -1415,6 +1526,7 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
                                     res.status(424).json({
                                         error: "s3 delete failed"
                                     });
+                                    return;
                                 } else {
                                     if (!(addParams.Key === 'NO' && addParams.Body === 'NO')) {
                                         s3.putObject(addParams, (err, data) => {
@@ -1422,16 +1534,19 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
                                                 res.status(424).json({
                                                     error: "s3 store failed"
                                                 });
+                                                return;
                                             } else {
                                                 res.json({
                                                     success: true
                                                 });
+                                                return;
                                             }
                                         });
                                     } else {
                                         res.json({
                                             success: true
                                         });
+                                        return;
                                     }
                                 }
                             });
@@ -1445,6 +1560,7 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
         res.status(403).json({
             error: "unauthorized request"
         });
+        return;
     });
 });
 
