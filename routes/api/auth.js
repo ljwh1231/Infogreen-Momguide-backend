@@ -1031,6 +1031,70 @@ router.get('/likeProduct', (req, res) => {
     });
 });
 
+/* 
+    > 해당 제품을 유저가 우리집/찜 제품으로 등록했는지 확인
+    > GET /api/auth/checkHomeLike
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.productIndex에 제품 인덱스, req.query.isCosmetic에 제품 카테고리를 전달(화장품 true, 화학제품 false)
+      error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
+    > {
+        home: true - 우리집 제품으로 등록되어 있음 / false - 우리집 제품으로 등록되어있지 않음
+        like: true - 찜한 제품으로 등록되어 있음 / false - 찜한 제품으로 등록되어있지 않음
+      }
+*/
+router.get('/checkHomeLike', (req, res) => {
+    let token = req.headers['authorization'];
+    let finalResult = {};
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+        }
+
+        const isCosmetic = req.query.isCosmetic === 'true';
+
+        db.MemberToHome.findOne({
+            where: {
+                memberIndex: token.index,
+                productIndex: req.query.productIndex,
+                isCosmetic: isCosmetic
+            }
+        }).then((result) => {
+            if (!result) {
+                finalResult.home = false;
+            } else {
+                finalResult.home = true;
+            }
+
+            db.MemberToLike.findOne({
+                where: {
+                    memberIndex: token.index,
+                    productIndex: req.query.productIndex,
+                    isCosmetic: isCosmetic
+                }
+            }).then((result) => {
+                if (!result) {
+                    finalResult.like = false;
+                } else {
+                    finalResult.like = true;
+                }
+
+                res.json(finalResult);
+            });
+        });
+
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+    });
+});
+
+
 /*
     > 비밀번호 변경을 위한 이메일 요청(로그인을 못 했을 시)
     > POST /api/auth/editProfile/requestPassword
