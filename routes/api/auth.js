@@ -1389,26 +1389,38 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
 
         if (req.fields.name) {
             infoObj.name = req.fields.name;
+        } else {
+            infoObj.name = null;
         }
 
         if (req.fields.phoneNum) {
             infoObj.phoneNum = req.fields.phoneNum;
+        } else {
+            infoObj.phoneNum = null;
         }
 
         if (req.fields.postalCode) {
             infoObj.postalCode = req.fields.postalCode;
+        } else {
+            infoObj.postalCode = null;
         }
 
         if (req.fields.addressRoad) {
             infoObj.addressRoad = req.fields.addressRoad;
+        } else {
+            infoObj.addressRoad = null;
         }
 
         if (req.fields.addressSpec) {
             infoObj.addressSpec = req.fields.addressSpec;
+        } else {
+            infoObj.addressSpec = null;
         }
 
         if (req.fields.addressEtc) {
             infoObj.addressEtc = req.fields.addressEtc;
+        } else {
+            infoObj.addressEtc = null;
         }
 
         if (!(typeof req.files.image === 'undefined')) {
