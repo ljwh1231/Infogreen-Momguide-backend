@@ -1113,14 +1113,13 @@ router.put('/editOneToOne', formidable(), (req, res) => {
                     });
                     return;
                 } else {
-                    if (!req.fields.title || !req.fields.questionContent) {
+                    if (!req.fields.questionContent) {
                         res.status(400).json({
                             error: "invalid request"
                         });
                         return;
                     }
 
-                    queObj.title = req.fields.title;
                     queObj.questionContent = req.fields.questionContent;
 
                     if (!(typeof req.files.questionFile === 'undefined')) {
