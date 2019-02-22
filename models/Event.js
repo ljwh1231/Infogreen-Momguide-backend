@@ -19,7 +19,14 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
             defaultValue: ""
         },
-        photoUrl: {
+        titleImageUrl: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            validate: {
+                isUrl: true
+            }
+        },
+        contentImageUrl: {
             type: DataTypes.STRING,
             allowNull: false,
             validate: {

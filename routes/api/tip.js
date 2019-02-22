@@ -43,12 +43,46 @@ function decodeToken(token) {
     return promise;
 }
 
+async function putImage(file, folderName, fileName) {
+    const params = {
+        Bucket: config.s3Bucket,
+        Key: null,
+        ACL: 'public-read',
+        Body: null
+    };
+
+    if (!(file.type ===  'image/gif' 
+            || file.type === 'image/jpg' 
+            || file.type === 'image/png'
+            || file.type === 'image/jpeg')) {
+        res.status(400).json({
+            error: "invalid file(only image)"
+        });
+        return;
+    } else {
+        params.Key = folderName + fileName + getExtension(file.name);
+        params.Body = require('fs').createReadStream(file.path);
+    }
+
+    await s3.putObject(params, (err, data) => {
+        if (err){
+            res.status(424).json({
+                error: "s3 store failed"
+            });
+            return;
+        }
+    })
+
+    return params.Key;
+}
+
+
 /*
-    > admin이 꿀팁/이벤트를 작성하는 api
-    > POST /api/tipEvent/post?isTip=true
+    > admin이 꿀팁을 작성하는 api
+    > POST /api/tip/post
     > form data로 데이터 전달. 각 데이터의 이름은 디비와 통일.
-    > 필수정보: title(포스트 제목),subtitle(포스트 부제목), content(포스트 내용), expirationDate(만료 일자), postImage(이미지),
-      content는 없을 경우 빈 string "" 보낼 것, req.query.isTip으로 팁인지 이벤트인지 여부 전달.(팁이면 true, 이벤트면 false)
+    > 필수정보: title(포스트 제목),subtitle(포스트 부제목), content(포스트 내용), titleImage(표지 이미지), contentImage(내용 이미지)
+      content는 없을 경우 빈 string "" 보낼 것
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "unauthorized request": 사용 권한이 없는 접근
@@ -62,13 +96,6 @@ function decodeToken(token) {
 */
 router.post('/post', formidable(), (req, res) => {
     let token = req.headers['authorization'];
-
-    const params = {
-        Bucket: config.s3Bucket,
-        Key: null,
-        ACL: 'public-read',
-        Body: null
-    };
 
     postObj = {};
 
@@ -87,22 +114,8 @@ router.post('/post', formidable(), (req, res) => {
             return;
         }
 
-        if (!req.fields.title || !req.fields.subtitle || !req.fields.content || !req.fields.expirationDate || !req.files.postImage
-                || typeof req.files.postImage === 'undefined' || !req.query.isTip) {
-            res.status(400).json({
-                error: "invalid request"
-            });
-            return;
-        }
-
-        if (req.query.isTip !== 'true' && req.query.isTip !== 'false') {
-            res.status(400).json({
-                error: "invalid request"
-            });
-            return;
-        }
-
-        if (!moment(req.fields.expirationDate).isValid() || !moment(req.fields.expirationDate).isAfter(moment())) {
+        if (!req.fields.title || !req.fields.subtitle || !req.fields.content || !req.files.titleImage || typeof req.files.titleImage === 'undefined' 
+                || !req.files.contentImage || typeof req.files.contentImage === 'undefined') {
             res.status(400).json({
                 error: "invalid request"
             });
@@ -112,105 +125,40 @@ router.post('/post', formidable(), (req, res) => {
         postObj.title = req.fields.title;
         postObj.subtitle = req.fields.subtitle;
         postObj.content = req.fields.content;
-        postObj.expirationDate = moment(req.fields.expirationDate);
 
-        if (req.query.isTip === 'true') {
-            db.HoneyTip.findAll({
-                limit: 1,
-                where: {},
-                order: [[ 'created_at', 'DESC' ]]
-            }).then((result) => {
-                let nextIndex = 0;
-                if (result.length === 0) {
-                    nextIndex = 1;
-                } else {
-                    nextIndex = result[0].dataValues.index + 1;
-                }
+        db.HoneyTip.findAll({
+            limit: 1,
+            where: {},
+            order: [[ 'created_at', 'DESC' ]]
+        }).then((result) => {
+            let nextIndex = 0;
+            if (result.length === 0) {
+                nextIndex = 1;
+            } else {
+                nextIndex = result[0].dataValues.index + 1;
+            }
 
-                if (!(req.files.postImage.type ===  'image/gif' 
-                        || req.files.postImage.type === 'image/jpg' 
-                        || req.files.postImage.type === 'image/png'
-                        || req.files.postImage.type === 'image/jpeg')) {
-                    res.status(400).json({
-                        error: "invalid file(only image)"
+            putImage(req.files.titleImage, 'tip-images/title-images/', nextIndex).then(key => {
+                postObj.titleImageUrl = config.s3Url + key;
+
+                putImage(req.files.contentImage, 'tip-images/content-images/', nextIndex).then(key => {
+                    postObj.contentImageUrl = config.s3Url + key;
+                    
+                    db.HoneyTip.create(
+                        postObj
+                    ).then((result) => {
+                        if (!result) {
+                            res.status(424).json({
+                                error: "post add failed"
+                            });
+                        } else {
+                            res.json(result);
+                            return;
+                        }
                     });
-                } else {
-                    params.Key = "tip-images/" + nextIndex.toString() + getExtension(req.files.postImage.name);
-                    params.Body = require('fs').createReadStream(req.files.postImage.path);
-                    postObj.photoUrl = config.s3Url + params.Key;
-                }
-
-                s3.putObject(params, (err, data) => {
-                    if (err) {
-                        res.status(424).json({
-                            error: "s3 store failed"
-                        });
-                        return;
-                    } else {
-                        db.HoneyTip.create(
-                            postObj
-                        ).done((result) => {
-                            if (!result) {
-                                res.status(424).json({
-                                    error: "post add failed"
-                                });
-                            } else {
-                                res.json(result);
-                                return;
-                            }
-                        });
-                    }
                 });
             });
-        } else {
-            db.Event.findAll({
-                limit: 1,
-                where: {},
-                order: [[ 'created_at', 'DESC' ]]
-            }).then((result) => {
-                let nextIndex = 0;
-                if (result.length === 0) {
-                    nextIndex = 1;
-                } else {
-                    nextIndex = result[0].dataValues.index + 1;
-                }
-
-                if (!(req.files.postImage.type ===  'image/gif' 
-                        || req.files.postImage.type === 'image/jpg' 
-                        || req.files.postImage.type === 'image/png'
-                        || req.files.postImage.type === 'image/jpeg')) {
-                    res.status(400).json({
-                        error: "invalid file(only image)"
-                    });
-                } else {
-                    params.Key = "event-images/" + nextIndex.toString() + getExtension(req.files.postImage.name);
-                    params.Body = require('fs').createReadStream(req.files.postImage.path);
-                    postObj.photoUrl = config.s3Url + params.Key;
-                }
-
-                s3.putObject(params, (err, data) => {
-                    if (err) {
-                        res.status(424).json({
-                            error: "s3 store failed"
-                        });
-                        return;
-                    } else {
-                        db.Event.create(
-                            postObj
-                        ).done((result) => {
-                            if (!result) {
-                                res.status(424).json({
-                                    error: "post add failed"
-                                });
-                            } else {
-                                res.json(result);
-                                return;
-                            }
-                        });
-                    }
-                });
-            });
-        }
+        });
 
     }).catch((error) => {
         res.status(403).json({
