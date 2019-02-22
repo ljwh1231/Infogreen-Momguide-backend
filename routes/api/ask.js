@@ -248,6 +248,56 @@ router.get('/ingredOpen', (req, res) => {
     });
 });
 
+/* 
+    > 해당 제품을 유저가 성분 공개 요청 했는지 확인
+    > GET /api/ask/checkIngredOpen
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.productIndex로 해당 제품의 index 넣어주기
+    > error: {
+        "invalid request": 올바른 req가 전달되지 않음
+        "unauthorized request": 권한 없는 사용자가 접근
+    }
+    > check {
+        true(성분 공개 요청을 했음)
+        false(성분 공개 요청을 하지 않음)
+      }
+*/
+router.get('/checkIngredOpen', (req, res) => {
+    let token = req.headers['authorization'];
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.MemberToOpenRequest.findOne({
+            where: {
+                memberIndex: token.index,
+                productIndex: req.query.productIndex
+            }
+        }).then((result) => {
+            if (!result) {
+                res.json({
+                    check: false
+                });
+                return;
+            } else {
+                res.json({
+                    check: true
+                });
+                return;
+            }
+        });
+
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
 
 /*
     > 해당 제품에 대해 성분 공개 요청한 사람들의 수
