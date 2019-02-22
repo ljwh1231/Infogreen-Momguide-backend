@@ -1178,7 +1178,7 @@ router.get('/checkHomeLike', (req, res) => {
 
 /*
     > 비밀번호 변경을 위한 이메일 요청(로그인을 못 했을 시)
-    > POST /api/auth/editProfile/requestPassword
+    > POST /api/auth/requestPassword
     > req.body.email로 email 전달.
     > error: {
           "incorrect email": 적절하지 않은 이메일(가입시 입력한 이메일과 다름)

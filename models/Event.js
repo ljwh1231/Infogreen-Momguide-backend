@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('HoneyTip',{
+    return sequelize.define('Event',{
         index: {
             type: DataTypes.BIGINT,
             allowNull: false,
@@ -36,6 +36,6 @@ module.exports = (sequelize, DataTypes) => {
     }, {
         underscored: true,
         freezeTableName: true,
-        tableName: 'honey_tip'
+        tableName: 'event'
     });
 }

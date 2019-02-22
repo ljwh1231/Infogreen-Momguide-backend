@@ -43,6 +43,9 @@ const MemberToOpenRequest = require('./MemberToOpenRequest')(sequelize, Sequeliz
 const IngredientAnalysis = require('./IngredientAnalysis')(sequelize, Sequelize);
 const OneToOneQuestion = require('./OneToOneQuestion')(sequelize, Sequelize);
 
+const HoneyTip = require('./HoneyTip')(sequelize, Sequelize);
+const Event = require('./Event')(sequelize, Sequelize);
+
 module.exports = {
     CosmeticIngredient,
     CosmeticDB,
@@ -54,5 +57,7 @@ module.exports = {
     MemberToOpenRequest,
     IngredientAnalysis,
     OneToOneQuestion,
+    HoneyTip,
+    Event,
     sequelize
 };
