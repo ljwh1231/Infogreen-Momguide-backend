@@ -1158,7 +1158,7 @@ router.put('/editProfile/resetPassword', (req, res) => {
     > PUT /api/auth/editProfile/edit
     > form data로 데이터 전달. 단, 이메일은 변경 불가이고 비밀번호는 변경 절차가 별도이므로 전달하지 않는다.
     > 필수정보: nickName(닉네임), gender(성별), memberBirthYear(회원생년), memberBirthMonth(회원생월), memberBirthDay(회원생일),
-      hasChild(자녀여부)
+      hasChild(자녀여부), isImageChanged(프로필 사진 변경 여부)
     > 필수/선택정보(hasChild가 true일 경우엔 필수로 받기. 아니면 받지 않기.): childBirthYear(자식생년), childBirthMonth(자식생월), childBirthDay(자식생일)
     > 선택정보: name(이름), phoneNum(휴대폰번호 - "-" 빼고 숫자로만 이루어진 string으로), postalCode(우편번호), addressRoad(도로명 주소), addressSpec(상세주소),
       addressEtc(참고주소)
@@ -1209,6 +1209,8 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
         infoObj.memberBirthMonth = Number(req.fields.memberBirthMonth);
         infoObj.memberBirthDay = Number(req.fields.memberBirthDay);
         infoObj.hasChild = req.fields.hasChild === 'true';
+
+        const isImageChanged = req.fields.isImageChanged === 'true';
 
         if (infoObj.hasChild === true) {
             if (!req.fields.childBirthYear || !req.fields.childBirthMonth || !req.fields.childBirthDay) {
@@ -1261,8 +1263,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
         db.MemberInfo.findOne({
             where: {
                 index: token.index,
-                email: token.email,
-                nickName: token.nickName
+                email: token.email
             }
         }).then((result) => {
             if (!result) {
@@ -1270,45 +1271,67 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                     error: "no info"
                 })
             } else {
-                deleteParams.Key = "profile-images/" + token.email + getExtension(result.dataValues.photoUrl);
-                s3.deleteObject(deleteParams, (err, data) => {
-                    if (err) {
-                        res.status(424).json({
-                            error: "s3 delete failed"
-                        });
-                    } else {
-                        s3.putObject(addParams, (err, data) => {
-                            if (err) {
-                                res.status(424).json({
-                                    error: "s3 store failed"
-                                });
-                            } else {
-                                if (!(addParams.Key === "NO") && !(addParams.Key === "NO")) {
-                                    infoObj.photoUrl = "https://s3.ap-northeast-2.amazonaws.com/infogreenmomguide/" + addParams.Key;
-                                }
-                                db.MemberInfo.update(
-                                    infoObj,
-                                    {
-                                        where: {
-                                            index: token.index
-                                        }
-                                    }
-                                ).then((result) => {
-                                    if (!result) {
-                                        res.status(424).json({
-                                            error: "update failed"
-                                        });
-                                    }
-                                    else {
-                                        res.json({
-                                            success: true
-                                        });
-                                    }
-                                });
+                if (!isImageChanged) {
+                    db.MemberInfo.update(
+                        infoObj,
+                        {
+                            where: {
+                                index: token.index
                             }
-                        });
-                    }
-                })
+                        }
+                    ).then((result) => {
+                        if (!result) {
+                            res.status(424).json({
+                                error: "update failed"
+                            });
+                        }
+                        else {
+                            res.json({
+                                success: true
+                            });
+                        }
+                    });
+                } else {
+                    deleteParams.Key = "profile-images/" + token.email + getExtension(result.dataValues.photoUrl);
+                    s3.deleteObject(deleteParams, (err, data) => {
+                        if (err) {
+                            res.status(424).json({
+                                error: "s3 delete failed"
+                            });
+                        } else {
+                            s3.putObject(addParams, (err, data) => {
+                                if (err) {
+                                    res.status(424).json({
+                                        error: "s3 store failed"
+                                    });
+                                } else {
+                                    if (!(addParams.Key === "NO") && !(addParams.Key === "NO")) {
+                                        infoObj.photoUrl = "https://s3.ap-northeast-2.amazonaws.com/infogreenmomguide/" + addParams.Key;
+                                    }
+                                    db.MemberInfo.update(
+                                        infoObj,
+                                        {
+                                            where: {
+                                                index: token.index
+                                            }
+                                        }
+                                    ).then((result) => {
+                                        if (!result) {
+                                            res.status(424).json({
+                                                error: "update failed"
+                                            });
+                                        }
+                                        else {
+                                            res.json({
+                                                success: true
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
             }
         });
 
