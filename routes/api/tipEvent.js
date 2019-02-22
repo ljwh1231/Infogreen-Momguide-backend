@@ -310,7 +310,7 @@ router.put('/post', formidable(), (req, res) => {
         if (req.query.isTip === 'true') {
             db.HoneyTip.findOne({
                 where: {
-                    index: req.query.index,
+                    index: Number(req.query.index),
                 }
             }).then((result) => {
                 if (!result) {
@@ -367,7 +367,7 @@ router.put('/post', formidable(), (req, res) => {
         } else {
             db.Event.findOne({
                 where: {
-                    index: req.query.index,
+                    index: Number(req.query.index),
                 }
             }).then((result) => {
                 if (!result) {
@@ -414,6 +414,147 @@ router.put('/post', formidable(), (req, res) => {
                                             });
                                             return;
                                         }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
+/*
+    > admin이 꿀팁/이벤트를 삭제하는 api
+    > DELETE /api/tipEvent/post?index=1?isTip=true
+    > req.query.index로 삭제하고자 하는 포스트의 index, req.query.isTip으로 팁인지 이벤트인지의 여부를 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "unauthorized request": 사용 권한이 없는 접근
+          "no such post": 해당 포스트는 존재하지 않음
+          "s3 delete failed": s3 버켓 안의 이미지 삭제 실패
+      }
+    > success: {
+        true: 성공적으로 변경
+      }
+*/
+router.delete('/post', (req, res) => {
+    let token = req.headers['authorization'];
+
+    const params = {
+        Bucket: config.s3Bucket,
+        Key: null
+    };
+
+    decodeToken(token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (token.index !== 1) {
+            res.status(403).json({
+                error: "unauthorized request"
+            });
+            return;
+        }
+
+        if (!req.query.isTip) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (req.query.isTip !== 'true' && req.query.isTip !== 'false') {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (req.query.isTip === 'true') {
+            db.HoneyTip.findOne({
+                where: {
+                    index: Number(req.query.index)
+                }
+            }).then((result) => {
+                if (!result) {
+                    res.status(424).json({
+                        error: "no such post"
+                    });
+                    return;
+                } else {
+                    params.Key = "tip-images/" + result.dataValues.index.toString() + getExtension(result.dataValues.photoUrl);
+                    s3.deleteObject(params, (err, data) => {
+                        if (err) {
+                            res.status(424).json({
+                                error: "s3 delete failed"
+                            });
+                            return;
+                        } else {
+                            db.HoneyTip.destroy({
+                                where: {
+                                    index: Number(req.query.index)
+                                }
+                            }).then((result) => {
+                                if (!result) {
+                                    res.status(424).json({
+                                        error: "post delete failed"
+                                    });
+                                    return;
+                                } else {
+                                    res.json({
+                                        success: true
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        } else {
+            db.Event.findOne({
+                where: {
+                    index: Number(req.query.index)
+                }
+            }).then((result) => {
+                if (!result) {
+                    res.status(424).json({
+                        error: "no such post"
+                    });
+                    return;
+                } else {
+                    params.Key = "event-images/" + result.dataValues.index.toString() + getExtension(result.dataValues.photoUrl);
+                    s3.deleteObject(params, (err, data) => {
+                        if (err) {
+                            res.status(424).json({
+                                error: "s3 delete failed"
+                            });
+                            return;
+                        } else {
+                            db.Event.destroy({
+                                where: {
+                                    index: Number(req.query.index)
+                                }
+                            }).then((result) => {
+                                if (!result) {
+                                    res.status(424).json({
+                                        error: "post delete failed"
+                                    });
+                                    return;
+                                } else {
+                                    res.json({
+                                        success: true
                                     });
                                 }
                             });
