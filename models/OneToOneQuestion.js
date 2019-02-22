@@ -10,10 +10,6 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.BIGINT,
             allowNull: false,
         },
-        title: {
-            type: DataTypes.STRING,
-            allowNull: false,
-        },
         questionContent: {
             type: DataTypes.STRING,
             allowNull: false

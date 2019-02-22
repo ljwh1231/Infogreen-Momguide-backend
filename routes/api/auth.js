@@ -1233,8 +1233,8 @@ router.put('/editProfile/resetPassword', (req, res) => {
           "update failed": db 안에 있는 회원정보 변경 실패
           "unauthorized request": 권한 없는 사용자가 접근
       }
-    > success: {
-        true: 성공적으로 회원정보 변경
+    > token: {
+        token (token value를 전달)
       }
 */
 router.put('/editProfile/edit', formidable(), (req, res) => {
@@ -1327,7 +1327,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
         db.MemberInfo.findOne({
             where: {
                 index: token.index,
-                email: token.email
+                email: token.email,
             }
         }).then((result) => {
             if (!result) {
@@ -1350,8 +1350,18 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                             });
                         }
                         else {
+                            const payload = {
+                                index: result.index,
+                                email: result.email,
+                                nickName: result.nickName
+                              };
+                            const jwtSecret = config.jwtSecret;
+                            const options = {expiresIn: 60*60*24*14};
+                            
+                            const token = jwt.sign(payload, jwtSecret, options);
+
                             res.json({
-                                success: true
+                                token: token
                             });
                         }
                     });
@@ -1386,8 +1396,18 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                                             });
                                         }
                                         else {
+                                            const payload = {
+                                                index: result.index,
+                                                email: result.email,
+                                                nickName: result.nickName
+                                              };
+                                            const jwtSecret = config.jwtSecret;
+                                            const options = {expiresIn: 60*60*24*14};
+                                            
+                                            const token = jwt.sign(payload, jwtSecret, options);
+
                                             res.json({
-                                                success: true
+                                                token: token
                                             });
                                         }
                                     });

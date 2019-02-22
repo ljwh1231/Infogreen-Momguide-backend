@@ -873,7 +873,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
     > 1:1 문의하기
     > POST /api/ask/questionOneToOne
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. form data로 데이터 전달. 각 데이터의 이름은 디비와 통일.
-    > 필수정보: title(포스트 제목), questionContent(요청내용)
+    > 필수정보: questionContent(문의내용)
     > 선택정보: questionFile(문의 관련 사진. 유저가 업로드하지 않으면 그냥 보내지 않기.)
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
@@ -906,14 +906,13 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
             });
         }
 
-        if (!req.fields.title || !req.fields.questionContent) {
+        if (!req.fields.questionContent) {
             res.status(400).json({
                 error: "invalid request"
             });
         }
 
         queObj.memberIndex = token.index;
-        queObj.title = req.fields.title;
         queObj.questionContent = req.fields.questionContent;
 
         db.OneToOneQuestion.findAll({
@@ -982,7 +981,7 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
     > 1:1 문의 수정
     > PUT /api/ask/editOneToOne?index=1
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. form data로 데이터 전달. 각 데이터의 이름은 디비와 통일. 수정하고자 하는 요청의 index를 req.query.index로 전달
-    > 필수정보: title(포스트 제목), questionContent(문의내용)
+    > 필수정보: questionContent(문의내용)
     > 선택정보: questionFile(문의 관련 사진. 유저가 업로드하지 않으면 그냥 보내지 않기. 사진이 있었는데 없애는 경우도 프론트에서 사진 없앤 후 api에는 사진을 안 보내면 됨.)
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
