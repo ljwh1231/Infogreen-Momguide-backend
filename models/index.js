@@ -49,7 +49,9 @@ CosmeticDB.hasMany(ProductReview);
 LivingDB.hasMany(ProductReview);
 
 const ProductReviewImage = require('./ProductReviewImage')(sequelize, Sequelize);
-ProductReview.hasMany(ProductReviewImage);
+ProductReview.hasMany(ProductReviewImage, {
+    onDelete: 'cascade'
+});
 
 const ProductAdditionalReview = require('./ProductAdditionalReview')(sequelize, Sequelize);
 ProductReview.hasMany(ProductAdditionalReview, {
