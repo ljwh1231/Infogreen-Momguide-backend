@@ -383,8 +383,6 @@ router.delete('/', async (req, res) => {
             }
         });
 
-        console.dir(review);
-        console.log(review.member_info_index, member.index);
         if(review.member_info_index !== member.index) {
             res.status(400).json({
                 error: "invalid request"
@@ -400,6 +398,263 @@ router.delete('/', async (req, res) => {
             error: "Internal Server Error"
         });
     }
+});
+
+/*
+ * 추가 리뷰 목록 불러오기 : GET /api/review/addition?reviewId=1
+ */
+
+router.get('/addition', async (req, res) => {
+    try {
+        const reviewId = req.query.reviewId;
+
+        const review = await db.ProductReview.findOne({
+            where: {
+                index: reviewId
+            }
+        });
+
+        const reviews = await review.getProductAdditionalReviews();
+        res.json(reviews);
+    } catch(e) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+    }
+});
+
+/*
+ * 추가 리뷰 추가하기 : POST /api/review/addition
+ * AUTHORIZATION NEEDED
+ * BODY SAMPlE (JSON) : {
+ *  reviewId: 1,
+ *  content: 'text'
+ * }
+ */
+
+router.post('/addition', async (req, res) => {
+    if(!req.body.reviewId || isNaN(Number(req.body.reviewId)) ||
+        !req.body.content) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    try {
+        let token = req.headers['authorization'];
+        token = await util.decodeToken(token);
+
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const member = await db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email,
+                nickName: token.nickName
+            }
+        });
+
+        if(!member) {
+            res.status(400).json({
+                error: 'invalid request'
+            });
+            return;
+        }
+
+        const review = await db.ProductReview.findOne({
+            where: {
+                index: req.body.reviewId
+            }
+        });
+
+        if(review.member_info_index !== member.index) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const moment = require('moment');
+        const additionalReview = await db.ProductAdditionalReview.create({
+            date: moment(),
+            content: req.body.content
+        });
+
+        review.addProductAdditionalReview(additionalReview);
+        res.json(additionalReview);
+    } catch(e) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+    }
+});
+
+/*
+ * 추가 리뷰 수정하기 : PUT /api/review/addition
+ * AUTHORIZATION NEEDED
+ * BODY SAMPLE (JSON) : {
+ *  additionalReviewId: 1,
+ *  content: 'text'
+ * }
+ */
+
+router.put('/addition', async (req, res) => {
+    if(!req.body.additionalReviewId || isNaN(Number(req.body.additionalReviewId)) ||
+        !req.body.content) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    try {
+        let token = req.headers['authorization'];
+        token = await util.decodeToken(token);
+
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const member = await db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email,
+                nickName: token.nickName
+            }
+        });
+
+        if(!member) {
+            res.status(400).json({
+                error: 'invalid request'
+            });
+            return;
+        }
+
+        const additionalReview = await db.ProductAdditionalReview.findOne({
+            where: {
+                index: req.body.additionalReviewId
+            }
+        });
+
+        if(!additionalReview) {
+            res.status(400).json({
+                error: 'invalid request'
+            });
+            return;
+        }
+
+        const review = await db.ProductReview.findOne({
+            where: {
+                index: additionalReview.product_review_index
+            }
+        });
+
+        if(review.member_info_index !== member.index) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        additionalReview.content = req.body.content;
+        additionalReview.save();
+
+        res.json(additionalReview);
+    } catch(e) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+    }
+});
+
+/*
+ * 추가 리뷰 삭제하기 : DELETE /api/review/addition
+ * AUTHORIZATION NEEDED
+ * BODY SAMPLE (JSON) : {
+ *  additionalReviewId: 1
+ * }
+ */
+
+router.delete('/addition', async (req, res) => {
+    if(!req.body.additionalReviewId || isNaN(Number(req.body.additionalReviewId))) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    try {
+        let token = req.headers['authorization'];
+        token = await util.decodeToken(token);
+
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const member = await db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email,
+                nickName: token.nickName
+            }
+        });
+
+        if(!member) {
+            res.status(400).json({
+                error: 'invalid request'
+            });
+            return;
+        }
+
+        const additionalReview = await db.ProductAdditionalReview.findOne({
+            where: {
+                index: req.body.additionalReviewId
+            }
+        });
+
+        if(!additionalReview) {
+            res.status(400).json({
+                error: 'invalid request'
+            });
+            return;
+        }
+
+        const review = await db.ProductReview.findOne({
+            where: {
+                index: additionalReview.product_review_index
+            }
+        });
+
+        if(review.member_info_index !== member.index) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        additionalReview.destroy();
+
+        res.json({
+            success: true
+        });
+    } catch(e) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+    }
+
 });
 
 module.exports = router;
