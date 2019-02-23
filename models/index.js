@@ -17,9 +17,21 @@ const sequelize = new Sequelize(
         define: {
             charset: 'utf8',
             dialectOptions: {
-                collate: 'utf8_general_ci',
+                collate: 'utf8_general_ci'
             }
-        }
+        },
+        dialectOptions: {
+            useUTC: false,
+            dateStrings: true,
+
+            typeCast: function (field, next) {
+                if (field.type === 'DATETIME') {
+                return field.string()
+                }
+                return next()
+            }
+        },
+        timezone: '+09:00'
     }
 );
 const CosmeticIngredient = require('./CosmeticIngredient')(sequelize, Sequelize);
