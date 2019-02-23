@@ -25,6 +25,10 @@ module.exports = (sequelize, DataTypes) => {
         isReported: {
             type: DataTypes.BOOLEAN,
             defaultValue: false
+        },
+        isDeleted: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
         }
     }, {
         underscored: true,

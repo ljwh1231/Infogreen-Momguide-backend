@@ -502,4 +502,84 @@ router.post('/comment', (req, res) => {
     });
 });
 
+/*
+    > 유저가 꿀팁에 작성한 댓글을 삭제하는 api
+    > DELETE /api/tip/comment
+    > req.body.index로 댓글의 index, req.body.tipIndex로 해당 꿀팁의 index 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such comment": 존재하지 않는 댓글
+          "already deleted": 이미 삭제된 댓글
+          "comment delete failed": 댓글 삭제 실패
+          "unauthorized request": 권한 없는 접근
+      }
+    > success: {
+        true: 성공적으로 댓글을 삭제
+      }
+*/
+router.delete('/comment', (req, res) => {
+    let token = req.headers['authorization'];
+
+    decodeToken(res, token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.Comment.findOne({
+            where: {
+                index: req.body.index,
+                member_info_index: token.index,
+                honey_tip_index: req.body.tipIndex
+            }
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such comment"
+                });
+                return;
+            } else {
+                if (result.dataValues.isDeleted) {
+                    res.status(400).json({
+                        error: "already deleted"
+                    });
+                }
+
+                db.Comment.update(
+                    {
+                        content: "삭제된 댓글입니다.",
+                        isDeleted: true
+                    },
+                    {
+                        where: {
+                            index: req.body.index,
+                            member_info_index: token.index,
+                            honey_tip_index: req.body.tipIndex
+                        }
+                    }
+                ).then((result) => {
+                    if (!result) {
+                        res.status(424).json({
+                            error: "comment delete failed"
+                        });
+                        return;
+                    } else {
+                        res.json({
+                            success: true
+                        });
+                    }
+                });
+            }
+        });
+        
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
 module.exports = router;
