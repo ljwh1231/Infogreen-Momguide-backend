@@ -12,12 +12,12 @@ const config = require('../../config/config');
 
 // function to get extension in filename
 function getExtension(fileName) {
-    var list = fileName.split('.');
+    const list = fileName.split('.');
     return '.' + list[list.length-1];
 }
 
 // function to decode user token
-function decodeToken(token) {
+function decodeToken(res, token) {
 
     if (!token) {
         res.status(400).json({
@@ -102,7 +102,7 @@ async function deleteImage(res, folderName, fileName, fileUrl) {
 /*
     > admin이 꿀팁을 작성하는 api
     > POST /api/tip/post
-    > form data로 데이터 전달. 각 데이터의 이름은 디비와 통일.
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. form data로 데이터 전달. 각 데이터의 이름은 디비와 통일.
     > 필수정보: title(포스트 제목),subtitle(포스트 부제목), content(포스트 내용), titleImage(표지 이미지), contentImage(내용 이미지)
       content는 없을 경우 빈 string "" 보낼 것
     > error: {
@@ -121,7 +121,7 @@ router.post('/post', formidable(), (req, res) => {
 
     postObj = {};
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -151,7 +151,7 @@ router.post('/post', formidable(), (req, res) => {
         db.HoneyTip.findAll({
             limit: 1,
             where: {},
-            order: [[ 'created_at', 'DESC' ]]
+            order: [[ 'index', 'DESC' ]]
         }).then((result) => {
             let nextIndex = 0;
             if (result.length === 0) {
@@ -193,7 +193,7 @@ router.post('/post', formidable(), (req, res) => {
 /*
     > admin이 꿀팁을 수정하는 api
     > PUT /api/tip/post?index=1
-    > form data로 데이터 전달. 각 데이터의 이름은 디비와 통일.
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. form data로 데이터 전달. 각 데이터의 이름은 디비와 통일.
     > 필수정보: title(포스트 제목),subtitle(포스트 부제목), content(포스트 내용), titleImage(표지 사진), contentImage(내용 사진) 
       content는 없을 경우 빈 string "" 보낼 것, 해당하는 포스트의 index를 req.query.index로 전달
     > error: {
@@ -214,7 +214,7 @@ router.put('/post', formidable(), (req, res) => {
 
     postObj = {};
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -294,14 +294,15 @@ router.put('/post', formidable(), (req, res) => {
 });
 
 /*
-    > admin이 꿀팁/이벤트를 삭제하는 api
-    > DELETE /api/tipEvent/post?index=1?isTip=true
-    > req.query.index로 삭제하고자 하는 포스트의 index, req.query.isTip으로 팁인지 이벤트인지의 여부를 전달
+    > admin이 꿀팁을 삭제하는 api
+    > DELETE /api/tip/post?index=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.index로 삭제하고자 하는 포스트의 index를 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "unauthorized request": 사용 권한이 없는 접근
           "no such post": 해당 포스트는 존재하지 않음
           "s3 delete failed": s3 버켓 안의 이미지 삭제 실패
+          "post delete failed": 포스트 삭제 실패
       }
     > success: {
         true: 성공적으로 변경
@@ -310,12 +311,7 @@ router.put('/post', formidable(), (req, res) => {
 router.delete('/post', (req, res) => {
     let token = req.headers['authorization'];
 
-    const params = {
-        Bucket: config.s3Bucket,
-        Key: null
-    };
-
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -330,107 +326,104 @@ router.delete('/post', (req, res) => {
             return;
         }
 
-        if (!req.query.isTip) {
-            res.status(400).json({
-                error: "invalid request"
-            });
-            return;
-        }
-
-        if (req.query.isTip !== 'true' && req.query.isTip !== 'false') {
-            res.status(400).json({
-                error: "invalid request"
-            });
-            return;
-        }
-
-        if (req.query.isTip === 'true') {
-            db.HoneyTip.findOne({
-                where: {
-                    index: Number(req.query.index)
-                }
-            }).then((result) => {
-                if (!result) {
-                    res.status(424).json({
-                        error: "no such post"
+        db.HoneyTip.findOne({
+            where: Number(req.query.index)
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such post"
+                });
+            } else {
+                deleteImage(res, 'tip-images/title-images/', result.dataValues.index.toString(), result.dataValues.titleImageUrl).then(key => {
+                    deleteImage(res, 'tip-images/content-images/', result.dataValues.index.toString(), result.dataValues.contentImageUrl).then(key => {
+                        db.HoneyTip.destroy({
+                            where: {
+                                index: result.dataValues.index
+                            }
+                        }).then((result) => {
+                            if (!result) {
+                                res.status(424).json({
+                                    error: "post delete failed"
+                                });
+                            } else {
+                                res.json({
+                                    success: true
+                                });
+                            }
+                        });
                     });
-                    return;
-                } else {
-                    params.Key = "tip-images/" + result.dataValues.index.toString() + getExtension(result.dataValues.photoUrl);
-                    s3.deleteObject(params, (err, data) => {
-                        if (err) {
-                            res.status(424).json({
-                                error: "s3 delete failed"
-                            });
-                            return;
-                        } else {
-                            db.HoneyTip.destroy({
-                                where: {
-                                    index: Number(req.query.index)
-                                }
-                            }).then((result) => {
-                                if (!result) {
-                                    res.status(424).json({
-                                        error: "post delete failed"
-                                    });
-                                    return;
-                                } else {
-                                    res.json({
-                                        success: true
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-        } else {
-            db.Event.findOne({
-                where: {
-                    index: Number(req.query.index)
-                }
-            }).then((result) => {
-                if (!result) {
-                    res.status(424).json({
-                        error: "no such post"
-                    });
-                    return;
-                } else {
-                    params.Key = "event-images/" + result.dataValues.index.toString() + getExtension(result.dataValues.photoUrl);
-                    s3.deleteObject(params, (err, data) => {
-                        if (err) {
-                            res.status(424).json({
-                                error: "s3 delete failed"
-                            });
-                            return;
-                        } else {
-                            db.Event.destroy({
-                                where: {
-                                    index: Number(req.query.index)
-                                }
-                            }).then((result) => {
-                                if (!result) {
-                                    res.status(424).json({
-                                        error: "post delete failed"
-                                    });
-                                    return;
-                                } else {
-                                    res.json({
-                                        success: true
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-        }
-
+                });
+            }
+        });
     }).catch((error) => {
         res.status(403).json({
             error: "unauthorized request"
         });
         return;
+    });
+});
+
+/*
+    > 꿀팁 불러오는 api
+    > GET /api/tip/post?page=1
+    > req.query.page로 해당 페이지 넘버를 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "find error": 탐색 오류
+      }
+    > {
+        Data: [] (제품 정보 배열)
+        totalPages: 전체 페이지 수
+        nextNum: 다음 페이지에서 보여야할 포스트 수
+      }
+*/
+router.get('/post', (req, res) => {
+    let limit = 12;
+
+    if (!req.query.page) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    db.HoneyTip.findAndCountAll({
+        where: {}
+    }).then((result) => {
+        if (!result) {
+            res.status(424).json({
+                error: "find error"
+            });
+            return;
+        }
+
+        let totalNum = result.count;
+        let totalPages = Math.ceil(totalNum/limit);
+        let nextNum = 0;
+
+        db.HoneyTip.findAll({
+            where: {},
+            limit: limit,
+            offset: limit * (Number(req.query.page)-1),
+            attributes: ['title', 'subtitle', 'titleImageUrl', 'created_at']
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "find error"
+                });
+                return;
+            } else {
+                if (Number(req.query.page) === (totalPages - 1)) {
+                    nextNum = totalNum % limit;
+                } else if (Number(req.query.page) === totalPages) {
+                    nextNum = 0;
+                } else {
+                    nextNum = limit;
+                }
+                res.json({Data: result, totalPages: totalPages, nextNum: nextNum});
+                return;
+            }
+        });
     });
 });
 
