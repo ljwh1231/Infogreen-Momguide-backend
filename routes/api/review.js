@@ -5,15 +5,24 @@ const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
 
 const db = require("../../models/index");
-const Op = db.sequelize.Op;
 const util = require("./util");
 const config = require("../../config/config");
 
 /*
- * 리뷰 불러오기 : GET /api/review?
+ * 리뷰 불러오기 : GET /api/review?id=1
  */
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
+
+});
+
+/*
+ * 리뷰 목록 불러오기 : GET /api/review/list
+ * AUTHORIZATION NEEDED
+ */
+
+router.get('/list', async (req, res) => {
+
 });
 
 /*
@@ -108,9 +117,23 @@ router.post('/', formidable({multiples: true}), async (req, res) => {
             });
         }
 
-        const review = await db.ProductReview.create({
-            ...reviewObject
-        });
+        if(!member || !product) {
+            res.status(400).json({
+                error: 'invalid request'
+            });
+            return;
+        }
+
+        const reviewExist = await db.sequelize.query(
+            `SELECT * FROM product_review WHERE (member_info_index=${member.index} AND ${req.fields.category}_index=${product.index});`,
+            { type: db.sequelize.QueryTypes.SELECT });
+        if(reviewExist.length) {
+            res.status(400).json({
+                error: 'invalid request'
+            });
+            return;
+        }
+        const review = await db.ProductReview.create(reviewObject);
         member.addProductReview(review);
         product.addProductReview(review);
 
