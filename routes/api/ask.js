@@ -12,12 +12,12 @@ const config = require('../../config/config');
 
 // function to get extension in filename
 function getExtension(fileName) {
-    var list = fileName.split('.');
+    const list = fileName.split('.');
     return '.' + list[list.length-1];
 }
 
 // function to decode user token
-function decodeToken(token) {
+function decodeToken(res, token) {
 
     if (!token) {
         res.status(400).json({
@@ -61,7 +61,7 @@ function decodeToken(token) {
 router.post('/requestIngredOpen', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -132,7 +132,7 @@ router.post('/requestIngredOpen', (req, res) => {
 router.delete('/cancelIngredOpen', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -206,7 +206,7 @@ router.get('/ingredOpen', (req, res) => {
     let token = req.headers['authorization'];
     let finalResult = [];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -264,7 +264,7 @@ router.get('/ingredOpen', (req, res) => {
 router.get('/checkIngredOpen', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -370,7 +370,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
     moment.tz.setDefault("Asia/Seoul");
     reqObj = {};
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -509,7 +509,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
 
     reqObj = {};
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.query.index) {
             res.status(400).json({
                 error: "invalid request"
@@ -673,7 +673,7 @@ router.delete('/cancelIngredAnal', (req, res) => {
         Key: null
     };
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -798,7 +798,7 @@ router.delete('/cancelIngredAnal', (req, res) => {
 router.get('/ingredAnal', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -856,7 +856,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
         Key: null
     };
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
@@ -1017,7 +1017,7 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
 
     queObj = {};
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1137,7 +1137,7 @@ router.put('/editOneToOne', formidable(), (req, res) => {
 
     queObj = {};
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.query.index) {
             res.status(400).json({
                 error: "invalid request"
@@ -1299,7 +1299,7 @@ router.delete('/cancelOneToOne', (req, res) => {
         Key: null
     };
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1424,7 +1424,7 @@ router.delete('/cancelOneToOne', (req, res) => {
 router.get('/oneToOne', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1482,7 +1482,7 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
         Key: null
     };
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({

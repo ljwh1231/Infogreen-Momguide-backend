@@ -13,12 +13,12 @@ const config = require('../../config/config');
 
 // function to get extension in filename
 function getExtension(fileName) {
-    var list = fileName.split('.');
+    const list = fileName.split('.');
     return '.' + list[list.length-1];
 }
 
 // function to decode user token
-function decodeToken(token) {
+function decodeToken(res, token) {
 
     if (!token) {
         res.status(400).json({
@@ -46,7 +46,7 @@ function decodeToken(token) {
 
 // async function to find one in product db
 async function findProduct(prevResult) {
-    let returnArray = [[], []];
+    let returnArray = [];
 
     for (let i=0; i<prevResult.length; ++i) {
         if (prevResult[i].dataValues.isCosmetic) {
@@ -55,7 +55,7 @@ async function findProduct(prevResult) {
                     index: prevResult[i].dataValues.productIndex
                 }
             }).then((result) => {
-                returnArray[0].push(result.dataValues);
+                returnArray.push(result.dataValues);
             });
         } else {
             await db.LivingDB.findOne({
@@ -63,7 +63,7 @@ async function findProduct(prevResult) {
                     index: prevResult[i].dataValues.productIndex
                 }
             }).then((result) => {
-                returnArray[1].push(result.dataValues);
+                returnArray.push(result.dataValues);
             });
         }
     }
@@ -351,7 +351,7 @@ router.get('/editProfile/checkPassword', (req, res) => {
         return;
     }
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -485,7 +485,7 @@ router.post('/login', (req, res) => {
 router.post('/refreshToken', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -547,7 +547,7 @@ router.post('/refreshToken', (req, res) => {
 router.get('/info', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -600,7 +600,7 @@ router.get('/info', (req, res) => {
 router.post('/addHomeCosmetic', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -651,7 +651,7 @@ router.post('/addHomeCosmetic', (req, res) => {
 router.post('/addHomeLiving', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -703,7 +703,7 @@ router.post('/addHomeLiving', (req, res) => {
 router.delete('/cancelHomeCosmetic', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -757,7 +757,7 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
 router.delete('/cancelHomeLiving', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -811,7 +811,7 @@ router.delete('/cancelHomeLiving', (req, res) => {
 router.post('/addLikeCosmetic', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -862,7 +862,7 @@ router.post('/addLikeCosmetic', (req, res) => {
 router.post('/addLikeLiving', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -914,7 +914,7 @@ router.post('/addLikeLiving', (req, res) => {
 router.delete('/cancelLikeCosmetic', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -968,7 +968,7 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
 router.delete('/cancelLikeLiving', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -1014,23 +1014,26 @@ router.delete('/cancelLikeLiving', (req, res) => {
 // 네이버
 
 /*
-    > 우리집 화학제품 불러오기 
-    > GET /api/auth/homeProduct
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
-    > []: 빈 배열. 검색 결과 없음.
-      error: {
-          "invalid request": 올바른 req가 전달되지 않음
-          "unauthorized request": 권한 없는 사용자가 접근
+    > 우리집 제품 불러오기 
+    > GET /api/auth/homeProduct?isCosmetic=true&page=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.isCosmetic으로 카테고리 전달.(true은 화장품, false는 생활화학제품),
+      req.query.page로 페이지 넘버 전달
+    > error: {
+        "invalid request": 올바른 req가 전달되지 않음
+        "unauthorized request": 권한 없는 사용자가 접근
+    }
+    > {
+        Data: [] (제품 정보 배열)
+        totalPages: 전체 페이지 수
       }
-    > [
-        []
-        [] : 두 배열을 가진 배열로 리턴. 1번째 배열은 화장품, 2번째 배열은 생활화학제품들의 객체로 이루어짐.
-      ]
 */
 router.get('/homeProduct', (req, res) => {
     let token = req.headers['authorization'];
+    const isCosmetic = req.query.isCosmetic === 'true';
 
-    decodeToken(token).then((token) => {
+    let limit = 10;
+
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1038,21 +1041,84 @@ router.get('/homeProduct', (req, res) => {
             return;
         }
 
-        db.MemberToHome.findAll({
-            where: {
-                memberIndex: token.index
-            }
-        }).then((result) => {
-            if (!result) {
-                res.json([]);
-                return;
-            } else {
-                findProduct(result).then((finalResult) => {
-                    res.json(finalResult);
+        if (!req.query.isCosmetic || !req.query.page) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (isCosmetic) {
+            db.MemberToHome.findAndCountAll({
+                where: {
+                    memberIndex: token.index,
+                    isCosmetic: true
+                }
+            }).then((result) => {
+                if (!result){
+                    res.status(424).json({
+                        error: "find error"
+                    });
                     return;
+                }
+                let totalPages = Math.ceil(result.count/limit);
+                db.MemberToHome.findAll({
+                    where: {
+                        memberIndex: token.index,
+                        isCosmetic: true
+                    },
+                    limit: limit,
+                    offset: limit * (Number(req.query.page)-1)
+                }).then((result) => {
+                    if (!result){
+                        res.status(424).json({
+                            error: "find error"
+                        });
+                        return;
+                    } else {
+                        findProduct(result).then((dataResult) => {
+                            res.json({Data: dataResult, totalPages: totalPages});
+                            return;
+                        });
+                    }
                 });
-            }
-        });
+            });
+        } else {
+            db.MemberToHome.findAndCountAll({
+                where: {
+                    memberIndex: token.index,
+                    isCosmetic: false
+                }
+            }).then((result) => {
+                if (!result){
+                    res.status(424).json({
+                        error: "find error"
+                    });
+                    return;
+                }
+                let totalPages = Math.ceil(result.count/limit);
+                db.MemberToHome.findAll({
+                    where: {
+                        memberIndex: token.index,
+                        isCosmetic: false
+                    },
+                    limit: limit,
+                    offset: limit * (Number(req.query.page)-1)
+                }).then((result) => {
+                    if (!result){
+                        res.status(424).json({
+                            error: "find error"
+                        });
+                        return;
+                    } else {
+                        findProduct(result).then((dataResult) => {
+                            res.json({Data: dataResult, totalPages: totalPages});
+                            return;
+                        });
+                    }
+                });
+            });
+        }
     }).catch((error) => {
         res.status(403).json({
             error: "unauthorized request"
@@ -1062,23 +1128,23 @@ router.get('/homeProduct', (req, res) => {
 });
 
 /*
-    > 찜 화학제품 불러오기 
-    > GET /api/auth/likeProduct
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
-    > []: 빈 배열. 검색 결과 없음.
-      error: {
-          "invalid request": 올바른 req가 전달되지 않음
-          "unauthorized request": 권한 없는 사용자가 접근
+    > 찜한 제품 불러오기 
+    > GET /api/auth/likeProduct?isCosmetic=true&page=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.isCosmetic으로 카테고리 전달.(true은 화장품, false는 생활화학제품),
+      req.query.page로 페이지 넘버 전달
+    > error: {
+        "invalid request": 올바른 req가 전달되지 않음
+        "unauthorized request": 권한 없는 사용자가 접근
+    }
+    > {
+        Data: [] (제품 정보 배열)
+        totalPages: 전체 페이지 수
       }
-    > [
-        []
-        [] : 두 배열을 가진 배열로 리턴. 1번째 배열은 화장품, 2번째 배열은 생활화학제품들의 객체로 이루어짐.
-      ]
 */
 router.get('/likeProduct', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1086,21 +1152,84 @@ router.get('/likeProduct', (req, res) => {
             return;
         }
 
-        db.MemberToLike.findAll({
-            where: {
-                memberIndex: token.index
-            }
-        }).then((result) => {
-            if (!result) {
-                res.json([]);
-                return;
-            } else {
-                findProduct(result).then((finalResult) => {
-                    res.json(finalResult);
+        if (!req.query.isCosmetic || !req.query.page) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (isCosmetic) {
+            db.MemberToLike.findAndCountAll({
+                where: {
+                    memberIndex: token.index,
+                    isCosmetic: true
+                }
+            }).then((result) => {
+                if (!result){
+                    res.status(424).json({
+                        error: "find error"
+                    });
                     return;
+                }
+                let totalPages = Math.ceil(result.count/limit);
+                db.MemberToLike.findAll({
+                    where: {
+                        memberIndex: token.index,
+                        isCosmetic: true
+                    },
+                    limit: limit,
+                    offset: limit * (Number(req.query.page)-1)
+                }).then((result) => {
+                    if (!result){
+                        res.status(424).json({
+                            error: "find error"
+                        });
+                        return;
+                    } else {
+                        findProduct(result).then((dataResult) => {
+                            res.json({Data: dataResult, totalPages: totalPages});
+                            return;
+                        });
+                    }
                 });
-            }
-        });
+            });
+        } else {
+            db.MemberToLike.findAndCountAll({
+                where: {
+                    memberIndex: token.index,
+                    isCosmetic: false
+                }
+            }).then((result) => {
+                if (!result){
+                    res.status(424).json({
+                        error: "find error"
+                    });
+                    return;
+                }
+                let totalPages = Math.ceil(result.count/limit);
+                db.MemberToLike.findAll({
+                    where: {
+                        memberIndex: token.index,
+                        isCosmetic: false
+                    },
+                    limit: limit,
+                    offset: limit * (Number(req.query.page)-1)
+                }).then((result) => {
+                    if (!result){
+                        res.status(424).json({
+                            error: "find error"
+                        });
+                        return;
+                    } else {
+                        findProduct(result).then((dataResult) => {
+                            res.json({Data: dataResult, totalPages: totalPages});
+                            return;
+                        });
+                    }
+                });
+            });
+        }
     }).catch((error) => {
         res.status(403).json({
             error: "unauthorized request"
@@ -1126,7 +1255,7 @@ router.get('/checkHomeLike', (req, res) => {
     let token = req.headers['authorization'];
     let finalResult = {};
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1251,7 +1380,7 @@ router.post('/requestPassword', (req, res) => {
 router.put('/editProfile/resetPassword', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1351,7 +1480,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
 
     const infoObj = {};
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
