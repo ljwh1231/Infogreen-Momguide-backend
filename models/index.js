@@ -43,6 +43,11 @@ const MemberToOpenRequest = require('./MemberToOpenRequest')(sequelize, Sequeliz
 const IngredientAnalysis = require('./IngredientAnalysis')(sequelize, Sequelize);
 const OneToOneQuestion = require('./OneToOneQuestion')(sequelize, Sequelize);
 
+const ProductReview = require('./ProductReview')(sequelize, Sequelize);
+MemberInfo.hasMany(ProductReview, { as: 'reviews' });
+CosmeticDB.hasMany(ProductReview, { as: 'reviews' });
+LivingDB.hasMany(ProductReview, { as: 'reviews' });
+
 module.exports = {
     CosmeticIngredient,
     CosmeticDB,
@@ -54,5 +59,6 @@ module.exports = {
     MemberToOpenRequest,
     IngredientAnalysis,
     OneToOneQuestion,
+    ProductReview,
     sequelize
 };
