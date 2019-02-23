@@ -427,4 +427,79 @@ router.get('/post', (req, res) => {
     });
 });
 
+/*
+    > 유저가 꿀팁에 댓글을 작성하는 api
+    > POST /api/tip/comment
+    > req.body.content로 댓글 내용, req.body.tipIndex로 해당 꿀팁의 index 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such post": 존재하지 않는 포스트
+          "no such member": 존재하지 않는 회원
+          "unauthorized request": 권한 없는 접근
+      }
+    > {
+        db에 삽입된 결과를 전달
+      }
+*/
+router.post('/comment', (req, res) => {
+    let token = req.headers['authorization'];
+
+    decodeToken(res, token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (!req.body.content) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.HoneyTip.findOne({
+            where: {
+                index: req.body.tipIndex
+            }
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such post"
+                });
+                return;
+            } else {
+                const tip = result;
+
+                db.MemberInfo.findOne({
+                    index: token.index
+                }).then(async (result) => {
+                    if (!result) {
+                        res.status(424).json({
+                            error: "no such member"
+                        });
+                    } else {
+                        const member = result;
+                        
+                        const comment = await db.Comment.create({
+                            content: req.body.content,
+                        });
+
+                        tip.addComment(comment);
+                        member.addComment(comment);
+
+                        res.json(comment);
+                    }
+                });
+            }
+        });
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
 module.exports = router;

@@ -58,6 +58,14 @@ const OneToOneQuestion = require('./OneToOneQuestion')(sequelize, Sequelize);
 const HoneyTip = require('./HoneyTip')(sequelize, Sequelize);
 const Event = require('./Event')(sequelize, Sequelize);
 
+const Comment = require('./Comment')(sequelize, Sequelize);
+
+HoneyTip.hasMany(Comment);
+MemberInfo.hasMany(Comment);
+
+Event.hasMany(Comment);
+MemberInfo.hasMany(Comment);
+
 module.exports = {
     CosmeticIngredient,
     CosmeticDB,
@@ -71,5 +79,6 @@ module.exports = {
     OneToOneQuestion,
     HoneyTip,
     Event,
+    Comment,
     sequelize
 };
