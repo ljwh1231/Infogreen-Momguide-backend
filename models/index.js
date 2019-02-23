@@ -44,9 +44,12 @@ const IngredientAnalysis = require('./IngredientAnalysis')(sequelize, Sequelize)
 const OneToOneQuestion = require('./OneToOneQuestion')(sequelize, Sequelize);
 
 const ProductReview = require('./ProductReview')(sequelize, Sequelize);
-MemberInfo.hasMany(ProductReview, { as: 'reviews' });
-CosmeticDB.hasMany(ProductReview, { as: 'reviews' });
-LivingDB.hasMany(ProductReview, { as: 'reviews' });
+MemberInfo.hasMany(ProductReview);
+CosmeticDB.hasMany(ProductReview);
+LivingDB.hasMany(ProductReview);
+
+const ProductReviewImage = require('./ProductReviewImage')(sequelize, Sequelize);
+ProductReview.hasMany(ProductReviewImage);
 
 module.exports = {
     CosmeticIngredient,
@@ -60,5 +63,6 @@ module.exports = {
     IngredientAnalysis,
     OneToOneQuestion,
     ProductReview,
+    ProductReviewImage,
     sequelize
 };
