@@ -51,6 +51,11 @@ LivingDB.hasMany(ProductReview);
 const ProductReviewImage = require('./ProductReviewImage')(sequelize, Sequelize);
 ProductReview.hasMany(ProductReviewImage);
 
+const ProductAdditionalReview = require('./ProductAdditionalReview')(sequelize, Sequelize);
+ProductReview.hasMany(ProductAdditionalReview, {
+    onDelete: 'cascade'
+});
+
 module.exports = {
     CosmeticIngredient,
     CosmeticDB,
@@ -64,5 +69,6 @@ module.exports = {
     OneToOneQuestion,
     ProductReview,
     ProductReviewImage,
+    ProductAdditionalReview,
     sequelize
 };
