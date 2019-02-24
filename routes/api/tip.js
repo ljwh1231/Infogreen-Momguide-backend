@@ -364,8 +364,8 @@ router.delete('/post', (req, res) => {
 });
 
 /*
-    > 꿀팁 불러오는 api
-    > GET /api/tip/post?page=1
+    > 꿀팁 목록 불러오는 api
+    > GET /api/tip/postList?page=1
     > req.query.page로 해당 페이지 넘버를 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
@@ -377,7 +377,7 @@ router.delete('/post', (req, res) => {
         nextNum: 다음 페이지에서 보여야할 포스트 수
       }
 */
-router.get('/post', (req, res) => {
+router.get('/postList', (req, res) => {
     let limit = 12;
 
     if (!req.query.page) {
@@ -505,7 +505,7 @@ router.post('/comment', (req, res) => {
 });
 
 /*
-    > 유저가 꿀팁에 작성한 댓글을 삭제하는 api
+    > 유저가 꿀팁에 작성한 댓글을 삭제하는 api(대댓글도 똑같으므로 같은 api로 사용한다.)
     > DELETE /api/tip/comment
     > req.body.index로 댓글의 index, req.body.tipIndex로 해당 꿀팁의 index 전달
     > error: {
@@ -681,5 +681,8 @@ router.post('/childComment', (req, res) => {
         return;
     });
 });
+
+// 팁 포스트 하나의 본문과 그 딸린 댓글들을 불러오는 api
+router.get('/')
 
 module.exports = router;

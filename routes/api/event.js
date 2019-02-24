@@ -382,7 +382,7 @@ router.delete('/post', (req, res) => {
 
 /*
     > 이벤트 목록 불러오는 api
-    > GET /api/event/post?state=total&page=1
+    > GET /api/event/postList?state=total&page=1
     > req.query.page로 해당 페이지 넘버를 전달, req.query.state로 보기 옵션을 전달(total은 전체, progress는 진행 중인 이벤트, finished는 종료된 이벤트)
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
@@ -394,7 +394,7 @@ router.delete('/post', (req, res) => {
         nextNum: 다음 페이지에서 보여야할 포스트 수
       }
 */
-router.get('/post', (req, res) => {
+router.get('/postList', (req, res) => {
     let limit = 12;
     const currentDate = moment();
 
@@ -625,7 +625,7 @@ router.post('/comment', (req, res) => {
 });
 
 /*
-    > 유저가 이벤트에 작성한 댓글을 삭제하는 api
+    > 유저가 이벤트에 작성한 댓글을 삭제하는 api(대댓글도 똑같으므로 같은 api로 사용한다.)
     > DELETE /api/event/comment
     > req.body.index로 댓글의 index, req.body.eventIndex로 해당 이벤트의 index 전달
     > error: {
