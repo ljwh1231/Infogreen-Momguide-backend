@@ -706,7 +706,7 @@ router.get('/post', (req, res) => {
 
     db.HoneyTip.findOne({
         where: {
-            index: req.query.index
+            index: Number(req.query.index)
         }
     }).then((tip) => {
         if (!tip) {
@@ -743,6 +743,84 @@ router.get('/post', (req, res) => {
                         });
                     }
                     res.json(comments);
+                    return;
+                }
+            });
+        }
+    });
+});
+
+/*
+    > 팁 포스트의 특정 댓글의 대댓글들을 불러오는 api
+    > GET /api/tip/childComment?index=1
+    > req.query.index 해당 댓글의 index를 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such comment": 존재하지 않는 댓글
+          "not proper comment": 적절하지 않은 댓글(팁이 아닌 이벤트의 댓글이거나 대댓글을 불러올 경우)
+          "find error": db에 있는 정보를 가져오는 데에 문제 발생
+          "unauthorized request": 권한 없는 접근
+      }
+    > [
+        댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.
+      ]
+*/
+router.get('/childComment', (req, res) => {
+    if (!req.query.index) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    db.Comment.findOne({
+        where: {
+            index: Number(req.query.index)
+        }
+    }).then((comment) => {
+        if (!comment) {
+            res.status(424).json({
+                error: "no such comment"
+            });
+            return;
+        } else if (comment.dataValues.event_index !== null || comment.dataValues.parentIndex !== null) {
+            res.status(424).json({
+                error: "not proper comment"
+            });
+            return;
+        } else {
+            db.Comment.findAll({
+                where: {
+                    parentIndex: comment.dataValues.index
+                }
+            }).then(async (childComments) => {
+                if (!childComments) {
+                    res.status(424).json({
+                        error: "find error"
+                    });
+                    return;
+                } else {
+                    for (let i=0; i<childComments.length; ++i) {
+                        await db.MemberInfo.findOne({
+                            attributes: [
+                                'index', 'nickName', 'photoUrl', 'gender', 'memberBirthYear', 'memberBirthMonth', 'memberBirthDay',
+                                'hasChild', 'childBirthYear', 'childBirthMonth', 'childBirthDay'
+                            ],
+                            where: {
+                                index: childComments[i].dataValues.member_info_index
+                            }
+                        }).then((result) => {
+                            if (!result) {
+                                res.status(424).json({
+                                    error: "find error"
+                                });
+                                return;
+                            } else {
+                                childComments[i].dataValues.creator = result.dataValues;
+                            }
+                        });
+                    }
+                    res.json(childComments);
                     return;
                 }
             });
