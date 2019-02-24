@@ -22,6 +22,10 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.INTEGER,
             defaultValue: 0
         },
+        childNum: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0
+        },
         isReported: {
             type: DataTypes.BOOLEAN,
             defaultValue: false

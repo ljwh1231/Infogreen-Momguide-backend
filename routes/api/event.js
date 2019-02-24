@@ -704,4 +704,101 @@ router.delete('/comment', (req, res) => {
     });
 });
 
+/*
+    > 유저가 이벤트 댓글에 대댓글을 작성하는 api
+    > POST /api/event/childComment
+    > req.body.content로 댓글 내용, req.body.commentIndex로 해당 댓글의 index를 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such comment": 존재하지 않는 댓글
+          "no such post": 존재하지 않는 포스트
+          "no such member": 존재하지 않는 회원
+          "unauthorized request": 권한 없는 접근
+      }
+    > {
+        db에 삽입된 결과를 전달
+      }
+*/
+router.post('/childComment', (req, res) => {
+    let token = req.headers['authorization'];
+
+    decodeToken(res, token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (!req.body.content) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.Comment.findOne({
+            where: {
+                index: req.body.commentIndex
+            }
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such comment"
+                });
+                return;
+            } else  {
+                result.increment("childNum");
+                const parentIndex = result.dataValues.index;
+
+                db.Event.findOne({
+                    where: {
+                        index: result.dataValues.event_index
+                    }
+                }).then((result) => {
+                    if (!result) {
+                        res.status(424).json({
+                            error: "no such post"
+                        });
+                        return;
+                    } else {
+                        const event = result;
+
+                        db.MemberInfo.findOne({
+                            where: {
+                                index: token.index
+                            }
+                        }).then(async (result) => {
+                            if (!result) {
+                                res.status(424).json({
+                                    error: "no such member"
+                                });
+                                return;
+                            } else {
+                                const member = result;
+
+                                const childComment = await db.Comment.create({
+                                    content: req.body.content,
+                                    parentIndex: parentIndex
+                                });
+                            
+                                event.addComment(childComment);
+                                member.addComment(childComment);
+                            
+                                res.json(childComment);
+                                return;
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
 module.exports = router;
