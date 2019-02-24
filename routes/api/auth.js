@@ -1145,6 +1145,8 @@ router.get('/likeProduct', (req, res) => {
     let token = req.headers['authorization'];
     const isCosmetic = req.query.isCosmetic === 'true';
 
+    let limit = 10;
+
     decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
