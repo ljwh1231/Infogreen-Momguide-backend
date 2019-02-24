@@ -683,6 +683,33 @@ router.post('/childComment', (req, res) => {
 });
 
 // 팁 포스트 하나의 본문과 그 딸린 댓글들을 불러오는 api
-router.get('/')
+router.get('/post', (req, res) => {
+    if (!req.query.index) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    db.Comment.findAll({
+        include: [{
+            model: db.HoneyTip,
+            through: {
+                where: {
+                    index: req.query.index
+                }
+            }
+        }]
+    }).then((result) => {
+        if (!result) {
+            res.status(424).json({
+                error: "find error"
+            });
+            return;
+        } else {
+            res.json(result);
+        }
+    });
+});
 
 module.exports = router;
