@@ -87,7 +87,7 @@ router.get('/member/list', async (req, res) => {
  * 상품 리뷰 목록 불러오기 : GET /api/review/product/list?category=living&id=1&page=1
  */
 
-router.get('/api/review/product/list', async (req, res) => {
+router.get('/product/list', async (req, res) => {
     if(!req.query.category || !req.query.id) {
         res.status(400).json({
             error: "invalid request"
@@ -98,6 +98,69 @@ router.get('/api/review/product/list', async (req, res) => {
     try {
         // TODO: 얼마만큼 보여줄지 기획에 따라 달라짐
     } catch(e) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+    }
+});
+
+/*
+ * 상품에 대해 리뷰를 작성한 여부 불러오기 : GET /api/review/status?category=living&id=1
+ * AUTHORIZATION NEEDED
+ */
+
+router.get('/status', async (req, res) => {
+    const category = req.query.category;
+    if(!category || !(category === 'living' || category === 'cosmetic') ||
+        !req.query.id || isNaN(Number(req.query.id))) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+    const id = Number(req.query.id);
+
+    try {
+        let token = req.headers['authorization'];
+        token = await util.decodeToken(token);
+
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const member = await db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email,
+                nickName: token.nickName
+            }
+        });
+
+        if(!member) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const reviewExist = await db.sequelize.query(
+            `SELECT * FROM product_review WHERE (member_info_index=${member.index} AND ${category}_index=${id});`,
+            { type: db.sequelize.QueryTypes.SELECT });
+
+        if(reviewExist.length) {
+            res.json({
+                exist: true
+            });
+        } else {
+            res.json({
+                exist: false
+            });
+        }
+    } catch(e) {
+        console.log(e);
         res.status(400).json({
             error: "invalid request"
         });
