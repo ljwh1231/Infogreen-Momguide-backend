@@ -1143,6 +1143,7 @@ router.get('/homeProduct', (req, res) => {
 */
 router.get('/likeProduct', (req, res) => {
     let token = req.headers['authorization'];
+    const isCosmetic = req.query.isCosmetic === 'true';
 
     decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
