@@ -667,6 +667,7 @@ router.delete('/comment', (req, res) => {
                     res.status(400).json({
                         error: "already deleted"
                     });
+                    return;
                 }
 
                 db.Comment.update(
@@ -691,6 +692,87 @@ router.delete('/comment', (req, res) => {
                         res.json({
                             success: true
                         });
+                    }
+                });
+            }
+        });
+        
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
+/*
+    > 유저가 이벤트에 작성한 댓글을 수정하는 api(대댓글도 똑같으므로 같은 api로 사용한다.)
+    > PUT /api/event/comment
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.content로 수정 내용, req.body.index로 댓글의 index, req.body.eventIndex로 해당 꿀팁의 index 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such comment": 존재하지 않는 댓글
+          "already deleted": 이미 삭제된 댓글
+          "comment edit failed": 댓글 수정 실패
+          "unauthorized request": 권한 없는 접근
+      }
+    > success: {
+        true: 성공적으로 댓글을 수정
+      }
+*/
+router.put('/comment', (req, res) => {
+    let token = req.headers['authorization'];
+
+    decodeToken(res, token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.Comment.findOne({
+            where: {
+                index: req.body.index,
+                member_info_index: token.index,
+                event_index: req.body.eventIndex
+            }
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such comment"
+                });
+                return;
+            } else {
+                if (result.dataValues.isDeleted) {
+                    res.status(400).json({
+                        error: "already deleted"
+                    });
+                    return;
+                }
+
+                db.Comment.update(
+                    {
+                        content: req.body.content,
+                    },
+                    {
+                        where: {
+                            index: req.body.index,
+                            member_info_index: token.index,
+                            event_index: req.body.eventIndex
+                        }
+                    }
+                ).then((result) => {
+                    if (!result) {
+                        res.status(424).json({
+                            error: "comment edit failed"
+                        });
+                        return;
+                    } else {
+                        res.json({
+                            success: true
+                        });
+                        return;
                     }
                 });
             }
@@ -812,7 +894,7 @@ router.post('/childComment', (req, res) => {
           "unauthorized request": 권한 없는 접근
       }
     > [
-        댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.
+        댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
       ]
 */
 router.get('/post', (req, res) => {
@@ -842,24 +924,28 @@ router.get('/post', (req, res) => {
                     return;
                 } else {
                     for (let i=0; i<comments.length; ++i) {
-                        await db.MemberInfo.findOne({
-                            attributes: [
-                                'index', 'nickName', 'photoUrl', 'gender', 'memberBirthYear', 'memberBirthMonth', 'memberBirthDay',
-                                'hasChild', 'childBirthYear', 'childBirthMonth', 'childBirthDay'
-                            ],
-                            where: {
-                                index: comments[i].dataValues.member_info_index
-                            }
-                        }).then((result) => {
-                            if (!result) {
-                                res.status(424).json({
-                                    error: "find error"
-                                });
-                                return;
-                            } else {
-                                comments[i].dataValues.creator = result.dataValues;
-                            }
-                        });
+                        if (comments[i].dataValues.isDeleted) {
+                            comments[i].dataValues.creator = {};
+                        } else {
+                            await db.MemberInfo.findOne({
+                                attributes: [
+                                    'index', 'nickName', 'photoUrl', 'gender', 'memberBirthYear', 'memberBirthMonth', 'memberBirthDay',
+                                    'hasChild', 'childBirthYear', 'childBirthMonth', 'childBirthDay'
+                                ],
+                                where: {
+                                    index: comments[i].dataValues.member_info_index
+                                }
+                            }).then((result) => {
+                                if (!result) {
+                                    res.status(424).json({
+                                        error: "find error"
+                                    });
+                                    return;
+                                } else {
+                                    comments[i].dataValues.creator = result.dataValues;
+                                }
+                            });
+                        }
                     }
                     res.json(comments);
                     return;
@@ -881,7 +967,7 @@ router.get('/post', (req, res) => {
           "unauthorized request": 권한 없는 접근
       }
     > [
-        댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.
+        댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
       ]
 */
 router.get('/childComment', (req, res) => {
@@ -920,24 +1006,28 @@ router.get('/childComment', (req, res) => {
                     return;
                 } else {
                     for (let i=0; i<childComments.length; ++i) {
-                        await db.MemberInfo.findOne({
-                            attributes: [
-                                'index', 'nickName', 'photoUrl', 'gender', 'memberBirthYear', 'memberBirthMonth', 'memberBirthDay',
-                                'hasChild', 'childBirthYear', 'childBirthMonth', 'childBirthDay'
-                            ],
-                            where: {
-                                index: childComments[i].dataValues.member_info_index
-                            }
-                        }).then((result) => {
-                            if (!result) {
-                                res.status(424).json({
-                                    error: "find error"
-                                });
-                                return;
-                            } else {
-                                childComments[i].dataValues.creator = result.dataValues;
-                            }
-                        });
+                        if (childComments[i].dataValues/isDeleted){
+                            childComments[i].dataValues.creator = {};
+                        } else {
+                            await db.MemberInfo.findOne({
+                                attributes: [
+                                    'index', 'nickName', 'photoUrl', 'gender', 'memberBirthYear', 'memberBirthMonth', 'memberBirthDay',
+                                    'hasChild', 'childBirthYear', 'childBirthMonth', 'childBirthDay'
+                                ],
+                                where: {
+                                    index: childComments[i].dataValues.member_info_index
+                                }
+                            }).then((result) => {
+                                if (!result) {
+                                    res.status(424).json({
+                                        error: "find error"
+                                    });
+                                    return;
+                                } else {
+                                    childComments[i].dataValues.creator = result.dataValues;
+                                }
+                            });
+                        }
                     }
                     res.json(childComments);
                     return;
