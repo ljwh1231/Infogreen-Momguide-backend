@@ -66,6 +66,8 @@ MemberInfo.hasMany(Comment);
 Event.hasMany(Comment);
 MemberInfo.hasMany(Comment);
 
+Comment.belongsTo(MemberInfo);
+
 module.exports = {
     CosmeticIngredient,
     CosmeticDB,

@@ -430,7 +430,7 @@ router.get('/postList', (req, res) => {
 /*
     > 유저가 꿀팁에 댓글을 작성하는 api
     > POST /api/tip/comment
-    > req.body.content로 댓글 내용, req.body.tipIndex로 해당 꿀팁의 index 전달
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.content로 댓글 내용, req.body.tipIndex로 해당 꿀팁의 index 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "no such post": 존재하지 않는 포스트
@@ -507,7 +507,7 @@ router.post('/comment', (req, res) => {
 /*
     > 유저가 꿀팁에 작성한 댓글을 삭제하는 api(대댓글도 똑같으므로 같은 api로 사용한다.)
     > DELETE /api/tip/comment
-    > req.body.index로 댓글의 index, req.body.tipIndex로 해당 꿀팁의 index 전달
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.index로 댓글의 index, req.body.tipIndex로 해당 꿀팁의 index 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "no such comment": 존재하지 않는 댓글
@@ -588,7 +588,7 @@ router.delete('/comment', (req, res) => {
 /*
     > 유저가 팁 댓글에 대댓글을 작성하는 api
     > POST /api/tip/childComment
-    > req.body.content로 댓글 내용, req.body.commentIndex로 해당 댓글의 index를 전달
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.content로 댓글 내용, req.body.commentIndex로 해당 댓글의 index를 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "no such comment": 존재하지 않는 댓글
@@ -682,7 +682,20 @@ router.post('/childComment', (req, res) => {
     });
 });
 
-// 팁 포스트 하나의 본문과 그 딸린 댓글들을 불러오는 api
+/*
+    > 팁 포스트 하나의 본문과 그 딸린 댓글들을 불러오는 api
+    > GET /api/tip/post?index=1
+    > req.query.index 해당 팁의 index를 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such post": 존재하지 않는 포스트
+          "find error": db에 있는 정보를 가져오는 데에 문제 발생
+          "unauthorized request": 권한 없는 접근
+      }
+    > [
+        댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.
+      ]
+*/
 router.get('/post', (req, res) => {
     if (!req.query.index) {
         res.status(400).json({
@@ -691,23 +704,48 @@ router.get('/post', (req, res) => {
         return;
     }
 
-    db.Comment.findAll({
-        include: [{
-            model: db.HoneyTip,
-            through: {
-                where: {
-                    index: req.query.index
-                }
-            }
-        }]
-    }).then((result) => {
-        if (!result) {
+    db.HoneyTip.findOne({
+        where: {
+            index: req.query.index
+        }
+    }).then((tip) => {
+        if (!tip) {
             res.status(424).json({
-                error: "find error"
+                error: "no such post"
             });
             return;
         } else {
-            res.json(result);
+            tip.getComments().then(async (comments) => {
+                if (!comments) {
+                    res.status(424).json({
+                        error: "find error"
+                    });
+                    return;
+                } else {
+                    for (let i=0; i<comments.length; ++i) {
+                        await db.MemberInfo.findOne({
+                            attributes: [
+                                'index', 'nickName', 'photoUrl', 'gender', 'memberBirthYear', 'memberBirthMonth', 'memberBirthDay',
+                                'hasChild', 'childBirthYear', 'childBirthMonth', 'childBirthDay'
+                            ],
+                            where: {
+                                index: comments[i].dataValues.member_info_index
+                            }
+                        }).then((result) => {
+                            if (!result) {
+                                res.status(424).json({
+                                    error: "find error"
+                                });
+                                return;
+                            } else {
+                                comments[i].dataValues.creator = result.dataValues;
+                            }
+                        });
+                    }
+                    res.json(comments);
+                    return;
+                }
+            });
         }
     });
 });

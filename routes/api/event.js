@@ -801,4 +801,72 @@ router.post('/childComment', (req, res) => {
     });
 });
 
+/*
+    > 이벤트 포스트 하나의 본문과 그 딸린 댓글들을 불러오는 api
+    > GET /api/event/post?index=1
+    > req.query.index 해당 팁의 index를 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such post": 존재하지 않는 포스트
+          "find error": db에 있는 정보를 가져오는 데에 문제 발생
+          "unauthorized request": 권한 없는 접근
+      }
+    > [
+        댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.
+      ]
+*/
+router.get('/post', (req, res) => {
+    if (!req.query.index) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    db.Event.findOne({
+        where: {
+            index: req.query.index
+        }
+    }).then((event) => {
+        if (!event) {
+            res.status(424).json({
+                error: "no such post"
+            });
+            return;
+        } else {
+            event.getComments().then(async (comments) => {
+                if (!comments) {
+                    res.status(424).json({
+                        error: "find error"
+                    });
+                    return;
+                } else {
+                    for (let i=0; i<comments.length; ++i) {
+                        await db.MemberInfo.findOne({
+                            attributes: [
+                                'index', 'nickName', 'photoUrl', 'gender', 'memberBirthYear', 'memberBirthMonth', 'memberBirthDay',
+                                'hasChild', 'childBirthYear', 'childBirthMonth', 'childBirthDay'
+                            ],
+                            where: {
+                                index: comments[i].dataValues.member_info_index
+                            }
+                        }).then((result) => {
+                            if (!result) {
+                                res.status(424).json({
+                                    error: "find error"
+                                });
+                                return;
+                            } else {
+                                comments[i].dataValues.creator = result.dataValues;
+                            }
+                        });
+                    }
+                    res.json(comments);
+                    return;
+                }
+            });
+        }
+    });
+});
+
 module.exports = router;
