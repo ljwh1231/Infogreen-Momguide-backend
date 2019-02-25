@@ -404,7 +404,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
         }
 
         const currentDate = moment().format('MMMM Do YYYY');
-        
+
         db.IngredientAnalysis.findAll({
             limit: 1,
             where: {
@@ -426,7 +426,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
                 db.IngredientAnalysis.findAll({
                     limit: 1,
                     where: {},
-                    order: [[ 'created_at', 'DESC' ]]
+                    order: [[ 'index', 'DESC' ]]
                 }).then((result) => {
                     if (result.length === 0) {
                         nextIndex = 1;
@@ -1081,7 +1081,7 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
         db.OneToOneQuestion.findAll({
             limit: 1,
             where: {},
-            order: [[ 'created_at', 'DESC' ]]
+            order: [[ 'index', 'DESC' ]]
         }).then((result) => {
             if (result.length === 0) {
                 nextIndex = 1;

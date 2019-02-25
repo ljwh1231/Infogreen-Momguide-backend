@@ -19,7 +19,19 @@ const sequelize = new Sequelize(
             dialectOptions: {
                 collate: 'utf8_general_ci'
             }
-        }
+        },
+        dialectOptions: {
+            useUTC: false,
+            dateStrings: true,
+
+            typeCast: function (field, next) {
+                if (field.type === 'DATETIME') {
+                return field.string()
+                }
+                return next()
+            }
+        },
+        timezone: '+09:00'
     }
 );
 const CosmeticIngredient = require('./CosmeticIngredient')(sequelize, Sequelize);
@@ -43,6 +55,20 @@ const MemberToOpenRequest = require('./MemberToOpenRequest')(sequelize, Sequeliz
 const IngredientAnalysis = require('./IngredientAnalysis')(sequelize, Sequelize);
 const OneToOneQuestion = require('./OneToOneQuestion')(sequelize, Sequelize);
 
+const HoneyTip = require('./HoneyTip')(sequelize, Sequelize);
+const Event = require('./Event')(sequelize, Sequelize);
+
+const Comment = require('./Comment')(sequelize, Sequelize);
+
+HoneyTip.hasMany(Comment);
+MemberInfo.hasMany(Comment);
+
+Event.hasMany(Comment);
+MemberInfo.hasMany(Comment);
+
+MemberInfo.belongsToMany(Event, {through: 'member_to_event'});
+Event.belongsToMany(MemberInfo, {through: 'member_to_event'});
+
 module.exports = {
     CosmeticIngredient,
     CosmeticDB,
@@ -54,5 +80,8 @@ module.exports = {
     MemberToOpenRequest,
     IngredientAnalysis,
     OneToOneQuestion,
+    HoneyTip,
+    Event,
+    Comment,
     sequelize
 };
