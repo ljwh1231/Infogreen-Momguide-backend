@@ -1046,6 +1046,7 @@ router.get('/childComment', (req, res) => {
           "no such member": 존재하지 않는 회원
           "additional info necessary": 추가 정보가 없음. 입력 요망.
           "no such event": 존재하지 않는 이벤트
+          "expired event": 이미 만료된 이벤트
           "application add failed": 이벤트 신청 실패
           "unauthorized request": 권한 없는 접근
       }
@@ -1103,6 +1104,13 @@ router.post('/application', (req, res) => {
                         });
                         return;
                     } else {
+                        if (event.dataValues.expirationDate > moment()) {
+                            res.status(400).json({
+                                error: "expired event"
+                            });
+                            return;
+                        }
+
                         const application = member.addEvents(event);
 
                         if (!application) {
