@@ -1216,4 +1216,83 @@ router.post('/application', (req, res) => {
     });
 });
 
+/*
+    > 유저가 해당 이벤트 포스트를 열었을 때 좋아요를 했는지 안했는지 체크하는 api
+    > GET /api/event/post/like?index=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.index로 확인하고자 하는 이벤트의 index 전달.
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such event": 존재하지 않는 이벤트
+          "unauthorized request": 권한 없는 접근
+      }
+    > like: {
+        true: 유저가 이 이벤트에 좋아요를 했음
+        false: 유저가 이 이벤트에 좋아요를 하지 않았음
+      }
+*/
+router.get('/post/like', (req, res) => {
+    if (!req.headers['authorization']) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    let token = req.headers['authorization'];
+
+    decodeToken(res, token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (!req.query.index) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.Event.findOne({
+            where: {
+                index: Number(req.query.index)
+            }
+        }).then((event) => {
+            if (!event) {
+                res.status(424).json({
+                    error: "no such event"
+                });
+                return;
+            } else {
+                db.LikeOrHate.findOne({
+                    where: {
+                        member_info_index: token.index,
+                        event_index: Number(req.query.index),
+                        assessment: true
+                    }
+                }).then((result) => {
+                    if (!result) {
+                        res.json({
+                            like: false
+                        });
+                        return;
+                    } else {
+                        res.json({
+                            like: true
+                        });
+                        return;
+                    }
+                });
+            }
+        });
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });    
+});
+
 module.exports = router;
