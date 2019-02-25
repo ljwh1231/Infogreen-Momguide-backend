@@ -256,8 +256,10 @@ router.get('/summary', async (req, res) => {
                 else
                     return ` OR product_review_index=${review.index}`;
             }).join('') + ';';
-        const images = reviews.length ? (await db.sequelize.query(getImagesQuery))[0].slice(0, 10) : [];
-        console.log(images);
+        let images = reviews.length ? (await db.sequelize.query(getImagesQuery))[0] : [];
+        if(images.length !== 0) {
+            images = images.sort((a, b) => a.index > b.index ? -1 : 1).slice(0, 10);
+        }
 
         const countFunction = (array, key, value) => {
             return array.filter((item) => item[key] === value).length;
