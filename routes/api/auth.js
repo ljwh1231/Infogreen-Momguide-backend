@@ -1135,11 +1135,12 @@ router.get('/checkHomeLike', (req, res) => {
         }
 
         const isCosmetic = req.query.isCosmetic === 'true';
+        const productIndex = Number(req.query.productIndex);
 
         db.MemberToHome.findOne({
             where: {
                 memberIndex: token.index,
-                productIndex: req.query.productIndex,
+                productIndex: productIndex,
                 isCosmetic: isCosmetic
             }
         }).then((result) => {
@@ -1152,7 +1153,7 @@ router.get('/checkHomeLike', (req, res) => {
             db.MemberToLike.findOne({
                 where: {
                     memberIndex: token.index,
-                    productIndex: req.query.productIndex,
+                    productIndex: productIndex,
                     isCosmetic: isCosmetic
                 }
             }).then((result) => {

@@ -275,7 +275,7 @@ router.get('/checkIngredOpen', (req, res) => {
         db.MemberToOpenRequest.findOne({
             where: {
                 memberIndex: token.index,
-                productIndex: req.query.productIndex
+                productIndex: Number(req.query.productIndex)
             }
         }).then((result) => {
             if (!result) {
@@ -321,7 +321,7 @@ router.get('/countIngredOpen', (req, res) => {
 
     db.MemberToOpenRequest.findAndCountAll({
         where: {
-            productIndex: req.query.productIndex
+            productIndex: Number(req.query.productIndex)
         }
     }).then((result) => {
         if (!result) {
@@ -519,7 +519,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
 
         db.IngredientAnalysis.findOne({
             where: {
-                index: req.query.index,
+                index: Number(req.query.index),
                 memberIndex: token.index
             }
         }).then((result) => {
@@ -556,7 +556,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
                             });
                             return;
                         } else {
-                            addParams.Key = "ingredient-analysis-files/request-files/" + req.query.index.toString() + getExtension(req.files.requestFile.name);
+                            addParams.Key = "ingredient-analysis-files/request-files/" + Number(req.query.index).toString() + getExtension(req.files.requestFile.name);
                             addParams.Body = require('fs').createReadStream(req.files.requestFile.path);
                             reqObj.requestFileUrl = config.s3Url + addParams.Key;   
                         }
@@ -567,7 +567,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
                     }
 
                     if (result.dataValues.requestFileUrl !== null) {
-                        deleteParams.Key = "ingredient-analysis-files/request-files/" + req.query.index.toString() + getExtension(result.dataValues.requestFileUrl);
+                        deleteParams.Key = "ingredient-analysis-files/request-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.requestFileUrl);
                     } else {
                         deleteParams.Key = "NO";
                     }
@@ -576,7 +576,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
                         reqObj,
                         {
                             where: {
-                                index: req.query.index,
+                                index: Number(req.query.index),
                                 memberIndex: token.index
                             }
                         }
@@ -683,7 +683,7 @@ router.delete('/cancelIngredAnal', (req, res) => {
 
         db.IngredientAnalysis.findOne({
             where: {
-                index: req.query.index,
+                index: Number(req.query.index),
                 memberIndex: token.index
             }
         }).then((result) => {
@@ -694,20 +694,20 @@ router.delete('/cancelIngredAnal', (req, res) => {
                 return;
             } else {
                 if (result.dataValues.requestFileUrl !== null) {
-                    requestParams.Key = "ingredient-analysis-files/request-files/" + req.query.index.toString() + getExtension(result.dataValues.requestFileUrl);
+                    requestParams.Key = "ingredient-analysis-files/request-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.requestFileUrl);
                 } else {
                     requestParams.Key = "NO";
                 }
 
                 if (result.dataValues.responseFileUrl !== null) {
-                    responseParams.Key = "ingredient-analysis-files/response-files/" + req.query.index.toString() + getExtension(result.dataValues.responseFileUrl);
+                    responseParams.Key = "ingredient-analysis-files/response-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.responseFileUrl);
                 } else {
                     responseParams.Key = "NO";
                 }
 
                 db.IngredientAnalysis.destroy({
                     where: {
-                        index: req.query.index,
+                        index: Number(req.query.index),
                         memberIndex: token.index
                     }
                 }).then((result) => {
@@ -883,7 +883,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
 
         db.IngredientAnalysis.findOne({
             where: {
-                index: req.query.index
+                index: Number(req.query.index)
             }
         }).then((result) => {
             if (!result) {
@@ -893,7 +893,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
                 return;
             } else {
                 if (!(typeof req.files.responseFile === 'undefined')) {
-                    addParams.Key = "ingredient-analysis-files/response-files/" + req.query.index.toString() + getExtension(req.files.responseFile.name);
+                    addParams.Key = "ingredient-analysis-files/response-files/" + Number(req.query.index).toString() + getExtension(req.files.responseFile.name);
                     addParams.Body = require('fs').createReadStream(req.files.responseFile.path);
                     resObj.responseFileUrl = config.s3Url + addParams.Key;
                 } else {
@@ -903,7 +903,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
                 }
 
                 if (result.dataValues.responseFileUrl !== null) {
-                    deleteParams.Key = "ingredient-analysis-files/response-files/" + req.query.index.toString() + getExtension(result.dataValues.responseFileUrl);
+                    deleteParams.Key = "ingredient-analysis-files/response-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.responseFileUrl);
                 } else {
                     deleteParams.Key = "NO";
                 }
@@ -912,7 +912,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
                     resObj,
                     {
                         where: {
-                            index: req.query.index
+                            index: Number(req.query.index)
                         }
                     }
                 ).then((result) => {
@@ -1147,7 +1147,7 @@ router.put('/editOneToOne', formidable(), (req, res) => {
 
         db.OneToOneQuestion.findOne({
             where: {
-                index: req.query.index,
+                index: Number(req.query.index),
                 memberIndex: token.index
             }
         }).then((result) => {
@@ -1182,7 +1182,7 @@ router.put('/editOneToOne', formidable(), (req, res) => {
                             });
                             return;
                         } else {
-                            addParams.Key = "one-to-one-question-files/question-files/" + req.query.index.toString() + getExtension(req.files.questionFile.name);
+                            addParams.Key = "one-to-one-question-files/question-files/" + Number(req.query.index).toString() + getExtension(req.files.questionFile.name);
                             addParams.Body = require('fs').createReadStream(req.files.questionFile.path);
                             queObj.questionFileUrl = config.s3Url + addParams.Key;   
                         }
@@ -1193,7 +1193,7 @@ router.put('/editOneToOne', formidable(), (req, res) => {
                     }
 
                     if (result.dataValues.questionFileUrl !== null) {
-                        deleteParams.Key = "one-to-one-question-files/question-files/" + req.query.index.toString() + getExtension(result.dataValues.questionFileUrl);
+                        deleteParams.Key = "one-to-one-question-files/question-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.questionFileUrl);
                     } else {
                         deleteParams.Key = "NO";
                     }
@@ -1202,7 +1202,7 @@ router.put('/editOneToOne', formidable(), (req, res) => {
                         queObj,
                         {
                             where: {
-                                index: req.query.index,
+                                index: Number(req.query.index),
                                 memberIndex: token.index
                             }
                         }
@@ -1309,7 +1309,7 @@ router.delete('/cancelOneToOne', (req, res) => {
 
         db.OneToOneQuestion.findOne({
             where: {
-                index: req.query.index,
+                index: Number(req.query.index),
                 memberIndex: token.index
             }
         }).then((result) => {
@@ -1320,20 +1320,20 @@ router.delete('/cancelOneToOne', (req, res) => {
                 return;
             } else {
                 if (result.dataValues.questionFileUrl !== null) {
-                    questionParams.Key = "one-to-one-question-files/question-files/" + req.query.index.toString() + getExtension(result.dataValues.questionFileUrl);
+                    questionParams.Key = "one-to-one-question-files/question-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.questionFileUrl);
                 } else {
                     questionParams.Key = "NO";
                 }
 
                 if (result.dataValues.answerFileUrl !== null) {
-                    answerParams.Key = "one-to-one-question-files/answer-files/" + req.query.index.toString() + getExtension(result.dataValues.answerFileUrl);
+                    answerParams.Key = "one-to-one-question-files/answer-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.answerFileUrl);
                 } else {
                     answerParams.Key = "NO";
                 }
 
                 db.OneToOneQuestion.destroy({
                     where: {
-                        index: req.query.index,
+                        index: Number(req.query.index),
                         memberIndex: token.index
                     }
                 }).then((result) => {
@@ -1509,7 +1509,7 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
 
         db.OneToOneQuestion.findOne({
             where: {
-                index: req.query.index
+                index: Number(req.query.index)
             }
         }).then((result) => {
             if (!result) {
@@ -1519,7 +1519,7 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
                 return;
             } else {
                 if (!(typeof req.files.answerFile === 'undefined')) {
-                    addParams.Key = "one-to-one-question-files/answer-files/" + req.query.index.toString() + getExtension(req.files.answerFile.name);
+                    addParams.Key = "one-to-one-question-files/answer-files/" + Number(req.query.index).toString() + getExtension(req.files.answerFile.name);
                     addParams.Body = require('fs').createReadStream(req.files.answerFile.path);
                     ansObj.answerFileUrl = config.s3Url + addParams.Key;
                 } else {
@@ -1529,7 +1529,7 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
                 }
 
                 if (result.dataValues.answerFileUrl !== null) {
-                    deleteParams.Key = "one-to-one-question-files/answer-files/" + req.query.index.toString() + getExtension(result.dataValues.answerFileUrl);
+                    deleteParams.Key = "one-to-one-question-files/answer-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.answerFileUrl);
                 } else {
                     deleteParams.Key = "NO";
                 }
@@ -1538,7 +1538,7 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
                     ansObj,
                     {
                         where: {
-                            index: req.query.index
+                            index: Number(req.query.index)
                         }
                     }
                 ).then((result) => {
