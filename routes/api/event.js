@@ -1037,4 +1037,95 @@ router.get('/childComment', (req, res) => {
     });
 });
 
+/*
+    > 유저가 이벤트 신청하는 api
+    > POST /api/event/application
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.eventIndex로 신청하고자 하는 이벤트 인덱스 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such member": 존재하지 않는 회원
+          "additional info necessary": 추가 정보가 없음. 입력 요망.
+          "no such event": 존재하지 않는 이벤트
+          "application add failed": 이벤트 신청 실패
+          "unauthorized request": 권한 없는 접근
+      }
+    > success: {
+        true: 성공적으로 신청 완료
+      }
+*/
+router.post('/application', (req, res) => {
+    let token = req.headers['authorization'];
+
+    decodeToken(res, token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (!req.body.eventIndex) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email,
+                nickName: token.nickName
+            }
+        }).then((member) => {
+            if (!member) {
+                res.status(424).json({
+                    error: "no such member"
+                });
+                return;
+            } else {
+                if (member.dataValues.name === null || member.dataValues.phoneNum === null || member.dataValues.postalCode === null
+                        || member.dataValues.addressRoad === null || member.dataValues.addressSpec === null) {
+                    res.status(400).json({
+                        error: "additional info necessary"
+                    });
+                    return;
+                }
+
+                db.Event.findOne({
+                    where: {
+                        index: req.body.eventIndex
+                    }
+                }).then((event) => {
+                    if (!event) {
+                        req.status(424).json({
+                            error: "no such event"
+                        });
+                        return;
+                    } else {
+                        const application = member.addEvents(event);
+
+                        if (!application) {
+                            res.status(424).json({
+                                error: "application add failed"
+                            });
+                            return;
+                        } else {
+                            res.json({
+                                success: true
+                            });
+                            return;
+                        }
+                    }
+                });
+            }
+        });
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
 module.exports = router;

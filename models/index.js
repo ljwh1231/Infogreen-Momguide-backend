@@ -66,7 +66,8 @@ MemberInfo.hasMany(Comment);
 Event.hasMany(Comment);
 MemberInfo.hasMany(Comment);
 
-Comment.belongsTo(MemberInfo);
+MemberInfo.belongsToMany(Event, {through: 'member_to_event'});
+Event.belongsToMany(MemberInfo, {through: 'member_to_event'});
 
 module.exports = {
     CosmeticIngredient,
