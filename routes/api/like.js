@@ -432,4 +432,198 @@ router.delete('/commentHate', (req, res) => {
     });
 });
 
+/*
+    > 유저가 특정 이벤트에 좋아요하는 api
+    > POST /api/like/eventLike
+    > req.body.eventIndex로 해당 이벤트의 index를 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such member": 존재하지 않는 회원
+          "no such event": 존재하지 않는 이벤트
+          "already liked": 이미 좋아요한 이벤트
+          "unauthorized request": 권한 없는 접근
+      }
+    > {
+        db에 삽입된 결과를 전달
+      }
+*/
+router.post('/eventLike', (req, res) => {
+    let token = req.headers['authorization'];
+
+    util.decodeToken(token, res).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (!req.body.eventIndex) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.MemberInfo.findOne({
+            where: {
+                index: token.index
+            }
+        }).then((member) => {
+            if (!member){
+                res.status(424).json({
+                    error: "no such member"
+                });
+            } else {
+                db.Event.findOne({
+                    where: {
+                        index: req.body.eventIndex
+                    }
+                }).then((event) => {
+                    if (!event) {
+                        res.status(424).json({
+                            error: "no such event"
+                        });
+                        return;
+                    } else {
+
+                        db.LikeOrHate.findOne({
+                            where: {
+                                member_info_index: token.index,
+                                event_index: req.body.eventIndex,
+                                assessment: true
+                            }
+                        }).then(async (result) => {
+                            if (result) {
+                                res.status(400).json({
+                                    error: "already liked"
+                                });
+                                return;
+                            } else {
+                                const like = await db.LikeOrHate.create({
+                                    assessment: true
+                                });
+
+                                event.addLikeOrHate(like);
+                                member.addLikeOrHate(like);
+
+                                res.json(like);
+                                return;
+                            }
+                        });
+                    }
+                });
+            }
+        });
+
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
+/*
+    > 유저가 특정 이벤트에 한 좋아요를 취소하는 api
+    > DELETE /api/like/eventLike
+    > req.body.eventIndex로 해당 이벤트의 index를 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such member": 존재하지 않는 회원
+          "no such event": 존재하지 않는 이벤트
+          "not liked": 좋아요하지 않은 댓글
+          "like delete failed": 좋아요 취소 실패
+          "unauthorized request": 권한 없는 접근
+      }
+    > success: {
+        true: 성공적으로 취소 완료
+      }
+*/
+router.delete('/eventLike', (req, res) => {
+    let token = req.headers['authorization'];
+
+    util.decodeToken(token, res).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (!req.body.eventIndex) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.MemberInfo.findOne({
+            where: {
+                index: token.index
+            }
+        }).then((member) => {
+            if (!member){
+                res.status(424).json({
+                    error: "no such member"
+                });
+            } else {
+                db.Event.findOne({
+                    where: {
+                        index: req.body.eventIndex
+                    }
+                }).then((event) => {
+                    if (!event) {
+                        res.status(424).json({
+                            error: "no such event"
+                        });
+                        return;
+                    } else {
+                        db.LikeOrHate.findOne({
+                            where: {
+                                member_info_index: token.index,
+                                event_index: req.body.eventIndex,
+                                assessment: true
+                            }
+                        }).then(async (result) => {
+                            if (!result) {
+                                res.status(400).json({
+                                    error: "not liked"
+                                });
+                                return;
+                            } else {
+                                db.LikeOrHate.destroy({
+                                    where: {
+                                        member_info_index: token.index,
+                                        event_index: req.body.eventIndex,
+                                        assessment: true
+                                    }
+                                }).then((result) => {
+                                    if (!result) {
+                                        res.status(424).json({
+                                            error: "like cancel failed"
+                                        });
+                                        return;
+                                    } else {
+                                        res.json({
+                                            success: true
+                                        });
+                                        return;
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
 module.exports = router;
