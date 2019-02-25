@@ -895,6 +895,7 @@ router.post('/childComment', (req, res) => {
       }
     > [
         댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
+        like, hate는 로그인한 유저가 해당 댓글에 좋아요/싫어요를 했는지의 여부를 전달. 만약 둘 다 하지 않았거나 로그인하지 않은 상태라면 둘 다 false를 전달.
       ]
 */
 router.get('/post', (req, res) => {
@@ -924,6 +925,43 @@ router.get('/post', (req, res) => {
                     return;
                 } else {
                     for (let i=0; i<comments.length; ++i) {
+                        let like = false;
+                        let hate = false;
+
+                        if (req.headers['authorization']) {
+                            const token = await decodeToken(res, req.headers['authorization']).catch((error) => {
+                                res.status(403).json({
+                                    error: "unauthorized request"
+                                });
+                                return;
+                            });
+
+                            if (!token.index || !token.email || !token.nickName) {
+                                res.status(400).json({
+                                    error: "invalid request"
+                                });
+                                return;
+                            }
+
+                            const likeOrHate = await db.LikeOrHate.findAll({
+                                where: {
+                                    member_info_index: token.index,
+                                    comment_index: comments[i].dataValues.index
+                                }
+                            });
+
+                            if (likeOrHate.length === 1) {
+                                if (likeOrHate[0].dataValues.assessment) {
+                                    like = true;
+                                } else {
+                                    hate = true;
+                                }
+                            } else if (likeOrHate.length === 2) {
+                                like = true;
+                                hate = true;
+                            }
+                        }
+
                         if (comments[i].dataValues.isDeleted) {
                             comments[i].dataValues.creator = {};
                         } else {
@@ -943,6 +981,8 @@ router.get('/post', (req, res) => {
                                     return;
                                 } else {
                                     comments[i].dataValues.creator = result.dataValues;
+                                    comments[i].dataValues.like = like;
+                                    comments[i].dataValues.hate = hate;
                                 }
                             });
                         }
@@ -968,6 +1008,7 @@ router.get('/post', (req, res) => {
       }
     > [
         댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
+        like, hate는 로그인한 유저가 해당 댓글에 좋아요/싫어요를 했는지의 여부를 전달. 만약 둘 다 하지 않았거나 로그인하지 않은 상태라면 둘 다 false를 전달.
       ]
 */
 router.get('/childComment', (req, res) => {
@@ -1006,6 +1047,43 @@ router.get('/childComment', (req, res) => {
                     return;
                 } else {
                     for (let i=0; i<childComments.length; ++i) {
+                        let like = false;
+                        let hate = false;
+
+                        if (req.headers['authorization']) {
+                            const token = await decodeToken(res, req.headers['authorization']).catch((error) => {
+                                res.status(403).json({
+                                    error: "unauthorized request"
+                                });
+                                return;
+                            });
+
+                            if (!token.index || !token.email || !token.nickName) {
+                                res.status(400).json({
+                                    error: "invalid request"
+                                });
+                                return;
+                            }
+
+                            const likeOrHate = await db.LikeOrHate.findAll({
+                                where: {
+                                    member_info_index: token.index,
+                                    comment_index: childComments[i].dataValues.index
+                                }
+                            });
+
+                            if (likeOrHate.length === 1) {
+                                if (likeOrHate[0].dataValues.assessment) {
+                                    like = true;
+                                } else {
+                                    hate = true;
+                                }
+                            } else if (likeOrHate.length === 2) {
+                                like = true;
+                                hate = true;
+                            }
+                        }
+
                         if (childComments[i].dataValues/isDeleted){
                             childComments[i].dataValues.creator = {};
                         } else {
@@ -1025,6 +1103,8 @@ router.get('/childComment', (req, res) => {
                                     return;
                                 } else {
                                     childComments[i].dataValues.creator = result.dataValues;
+                                    childComments[i].dataValues.like = like;
+                                    childComments[i].dataValues.hate = hate;
                                 }
                             });
                         }
