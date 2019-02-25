@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
             autoIncrement: true,
             primaryKey: true
         },
-        like: {
+        assessment: {
             type: DataTypes.BOOLEAN,
             allowNull: false
         }
