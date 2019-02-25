@@ -69,10 +69,27 @@ MemberInfo.hasMany(Comment);
 MemberInfo.belongsToMany(Event, {through: 'member_to_event'});
 Event.belongsToMany(MemberInfo, {through: 'member_to_event'});
 
-const Like = require('./LikeOrHate')(sequelize, Sequelize);
+const ProductReview = require('./ProductReview')(sequelize, Sequelize);
+MemberInfo.hasMany(ProductReview);
+CosmeticDB.hasMany(ProductReview);
+LivingDB.hasMany(ProductReview);
 
-Comment.hasMany(Like);
-MemberInfo.hasMany(Like);
+const ProductReviewImage = require('./ProductReviewImage')(sequelize, Sequelize);
+ProductReview.hasMany(ProductReviewImage, {
+    onDelete: 'cascade'
+});
+
+const ProductAdditionalReview = require('./ProductAdditionalReview')(sequelize, Sequelize);
+ProductReview.hasMany(ProductAdditionalReview, {
+    onDelete: 'cascade'
+});
+
+const LikeOrHate = require('./LikeOrHate')(sequelize, Sequelize);
+
+MemberInfo.hasMany(LikeOrHate);
+Comment.hasMany(LikeOrHate);
+Event.hasMany(LikeOrHate);
+ProductReview.hasMany(LikeOrHate);
 
 module.exports = {
     CosmeticIngredient,
@@ -88,6 +105,9 @@ module.exports = {
     HoneyTip,
     Event,
     Comment,
-    Like,
+    ProductReview,
+    ProductReviewImage,
+    ProductAdditionalReview,
+    LikeOrHate,
     sequelize
 };
