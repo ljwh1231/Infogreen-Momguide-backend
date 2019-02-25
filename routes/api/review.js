@@ -85,10 +85,12 @@ router.get('/member/list', async (req, res) => {
 
 /*
  * 상품 리뷰 목록 불러오기 : GET /api/review/product/list?category=living&id=1&page=1
+ * AUTHORIZATON NEEDED
  */
 
 router.get('/product/list', async (req, res) => {
-    if(!req.query.category || !req.query.id) {
+    if(!req.query.category || !(req.query.category === 'living' || req.query.category === 'cosmetic') ||
+        !req.query.id || isNaN(Number(req.query.id))) {
         res.status(400).json({
             error: "invalid request"
         });
@@ -96,7 +98,47 @@ router.get('/product/list', async (req, res) => {
     }
 
     try {
-        // TODO: 얼마만큼 보여줄지 기획에 따라 달라짐
+        let token = req.headers['authorization'];
+        token = await util.decodeToken(token);
+
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const member = await db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email,
+                nickName: token.nickName
+            }
+        });
+
+        if(!member) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const product = (req.query.category === 'living') ?
+            await db.LivingDB.findOne({
+                where: {
+                    index: Number(req.query.id)
+                }
+            }) :
+            await db.CosmeticDB.findOne({
+                where : {
+                    index: Number(req.query.id)
+                }
+            });
+        const page = req.query.page ? req.query.page : 1;
+        const pageSize = 6;
+
+        const reviews = await product.getProductReviews();
+        res.json(reviews.slice((page-1) * pageSize, page * pageSize));
     } catch(e) {
         res.status(400).json({
             error: "invalid request"
@@ -159,6 +201,76 @@ router.get('/status', async (req, res) => {
                 exist: false
             });
         }
+    } catch(e) {
+        console.log(e);
+        res.status(400).json({
+            error: "invalid request"
+        });
+    }
+});
+
+/*
+ * 상품에 대한 전체 정보 요약 불러오기 : GET /api/review/summary?category=living&id=1
+ */
+
+router.get('/summary', async (req, res) => {
+    const category = req.query.category;
+    const id = req.query.id;
+
+    if(!category || !(category === 'living' || category === 'cosmetic') ||
+        !id || isNaN(Number(id))) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+    }
+
+    try {
+        const product = category === 'living' ?
+            await db.LivingDB.findOne({
+                where: {
+                    index: id
+                }
+            }) :
+            await db.CosmeticDB.findOne({
+                where: {
+                    index: id
+                }
+            });
+
+        const reviews = await product.getProductReviews();
+        if(reviews.length === 0) {
+            res.json({
+                rating: 0,
+                functionalityCount: [0, 0, 0],
+                nonIrritatingCount: [0, 0, 0],
+                sentCount: [0, 0, 0],
+                costEffectivenessCount: [0, 0, 0],
+                images: []
+            });
+            return;
+        }
+        const getImagesQuery = `SELECT * FROM product_review_image WHERE` +
+            reviews.map((review, i) => {
+                if(i === 0)
+                    return ` product_review_index=${review.index}`;
+                else
+                    return ` OR product_review_index=${review.index}`;
+            }).join('') + ';';
+        const images = reviews.length ? (await db.sequelize.query(getImagesQuery))[0].slice(0, 10) : [];
+        console.log(images);
+
+        const countFunction = (array, key, value) => {
+            return array.filter((item) => item[key] === value).length;
+        };
+
+        res.json({
+            rating: product.rateSum / product.rateCount,
+            functionalityCount: [1, 2, 3].map((num) => countFunction(reviews, 'functionality', num)),
+            nonIrritatingCount: [1, 2, 3].map((num) => countFunction(reviews, 'nonIrritating', num)),
+            sentCount: [1, 2, 3].map((num) => countFunction(reviews, 'sent', num)),
+            costEffectivenessCount: [1, 2, 3].map((num) => countFunction(reviews, 'costEffectiveness', num)),
+            images: images
+        });
     } catch(e) {
         console.log(e);
         res.status(400).json({
@@ -263,9 +375,15 @@ router.post('/', formidable({multiples: true}), async (req, res) => {
         const review = await db.ProductReview.create(reviewObject);
         member.addProductReview(review);
         product.addProductReview(review);
+        product.rateCount += 1;
+        product.rateCount += reviewObject.rating;
+        await product.save();
 
-        const images = req.files.images;
-        if(images) {
+        let images = req.files.images;
+        if(typeof images === 'object' && !images.length) {
+            images = [images];
+        }
+        if(images && images.length) {
             const imageObjectArray = [];
 
             for (let i = 0; i < images.length; i++) {
@@ -273,14 +391,14 @@ router.post('/', formidable({multiples: true}), async (req, res) => {
 
                 const params = {
                     Bucket: config.s3Bucket,
-                    Key: `review-images/${review.index}-${i}.${util.getExtension(image.name)}`,
+                    Key: `review-images/${review.index}-${i}${util.getExtension(image.name)}`,
                     ACL: 'public-read',
                     Body: require('fs').createReadStream(image.path)
                 };
 
                 await s3.putObject(params).promise();
                 imageObjectArray.push({
-                    url: `https://s3.ap-northeast-2.amazonaws.com/review-images/${review.index}-${i}${util.getExtension(image.name)}`
+                    url: `https://s3.ap-northeast-2.amazonaws.com/infogreenmomguide/review-images/${review.index}-${i}${util.getExtension(image.name)}`
                 });
             }
             const imageObjects = await db.ProductReviewImage.bulkCreate(imageObjectArray);
@@ -301,6 +419,8 @@ router.post('/', formidable({multiples: true}), async (req, res) => {
  * AUTHORIZATION NEEDED
  * BODY SAMPLE (FORM-DATA) {
  *  "reviewId": 1,
+ *  "category": "living",
+ *  "productId": 1,
  *  "rating": 5
  *  "content": "text",
  *  "functionality": 1,
@@ -352,7 +472,22 @@ router.put('/', formidable({multiples: true}), async (req, res) => {
             }
         });
 
-        if(!member) {
+        let product = null;
+        if(req.fields.category === 'living') {
+            product = await db.LivingDB.findOne({
+                where: {
+                    index: req.fields.productId
+                }
+            });
+        } else {
+            product = await db.CosmeticDB.findOne({
+                where: {
+                    index: req.fields.productId
+                }
+            });
+        }
+
+        if(!member || !product) {
             res.status(400).json({
                 error: 'invalid request'
             });
@@ -360,7 +495,9 @@ router.put('/', formidable({multiples: true}), async (req, res) => {
         }
 
         const review = await db.ProductReview.findOne({
-            index: req.fields.reviewId
+            where: {
+                index: req.fields.reviewId
+            }
         });
 
         if(!review || (review.member_info_index !== member.index)) {
@@ -370,8 +507,12 @@ router.put('/', formidable({multiples: true}), async (req, res) => {
             return;
         }
 
+        product.ratingSum -= review.rating;
+        product.ratingSum += reviewModifyObject.rating;
+        await product.save();
+        await review.update(reviewModifyObject);
+
         await db.ProductReviewImage.destroy({where: {product_review_index: review.index}});
-        console.log(await review.getProductReviewImages());
 
         const images = req.files.images;
         if(images) {
@@ -382,14 +523,14 @@ router.put('/', formidable({multiples: true}), async (req, res) => {
 
                 const params = {
                     Bucket: config.s3Bucket,
-                    Key: `review-images/${review.index}-${i}.${util.getExtension(image.name)}`,
+                    Key: `review-images/${review.index}-${i}${util.getExtension(image.name)}`,
                     ACL: 'public-read',
                     Body: require('fs').createReadStream(image.path)
                 };
 
                 await s3.putObject(params).promise();
                 imageObjectArray.push({
-                    url: `https://s3.ap-northeast-2.amazonaws.com/review-images/${review.index}-${i}${util.getExtension(image.name)}`
+                    url: `https://s3.ap-northeast-2.amazonaws.com/infogreenmomguide/review-images/${review.index}-${i}${util.getExtension(image.name)}`
                 });
             }
             const imageObjects = await db.ProductReviewImage.bulkCreate(imageObjectArray);
