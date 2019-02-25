@@ -69,6 +69,11 @@ MemberInfo.hasMany(Comment);
 MemberInfo.belongsToMany(Event, {through: 'member_to_event'});
 Event.belongsToMany(MemberInfo, {through: 'member_to_event'});
 
+const Like = require('./LikeOrHate')(sequelize, Sequelize);
+
+Comment.hasMany(Like);
+MemberInfo.hasMany(Like);
+
 module.exports = {
     CosmeticIngredient,
     CosmeticDB,
@@ -83,5 +88,6 @@ module.exports = {
     HoneyTip,
     Event,
     Comment,
+    Like,
     sequelize
 };
