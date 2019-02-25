@@ -91,6 +91,12 @@ Comment.hasMany(LikeOrHate);
 Event.hasMany(LikeOrHate);
 ProductReview.hasMany(LikeOrHate);
 
+const Report = require('./Report')(sequelize, Sequelize);
+
+MemberInfo.hasMany(Report);
+Comment.hasMany(Report);
+ProductReview.hasMany(Report);
+
 module.exports = {
     CosmeticIngredient,
     CosmeticDB,
@@ -109,5 +115,6 @@ module.exports = {
     ProductReviewImage,
     ProductAdditionalReview,
     LikeOrHate,
+    Report,
     sequelize
 };

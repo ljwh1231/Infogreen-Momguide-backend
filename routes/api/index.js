@@ -9,5 +9,6 @@ router.use('/tip', require('./tip'));
 router.use('/event', require('./event'));
 router.use('/review', require('./review'));
 router.use('/like', require('./like'));
+router.use('/report', require('./report'));
 
 module.exports = router;
