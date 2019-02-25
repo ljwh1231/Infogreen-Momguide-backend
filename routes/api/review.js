@@ -48,7 +48,7 @@ router.get('/', async (req, res) => {
 router.get('/member/list', async (req, res) => {
     try {
         let token = req.headers['authorization'];
-        token = await util.decodeToken(token);
+        token = await util.decodeToken(token, res);
 
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
@@ -85,7 +85,7 @@ router.get('/member/list', async (req, res) => {
 
 /*
  * 상품 리뷰 목록 불러오기 : GET /api/review/product/list?category=living&id=1&page=1
- * AUTHORIZATON NEEDED
+ * AUTHORIZATION NEEDED
  */
 
 router.get('/product/list', async (req, res) => {
@@ -99,7 +99,7 @@ router.get('/product/list', async (req, res) => {
 
     try {
         let token = req.headers['authorization'];
-        token = await util.decodeToken(token);
+        token = await util.decodeToken(token, res);
 
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
@@ -134,12 +134,41 @@ router.get('/product/list', async (req, res) => {
                     index: Number(req.query.id)
                 }
             });
-        const page = req.query.page ? req.query.page : 1;
+        const page = req.query.page ? (Number(req.query.page) > 0 ? Number(req.query.page) : 1) : 1;
         const pageSize = 6;
 
-        const reviews = await product.getProductReviews();
-        res.json(reviews.slice((page-1) * pageSize, page * pageSize));
+        let reviews = await product.getProductReviews();
+        const nextPageExist = (reviews.length >= page * pageSize);
+        reviews = reviews.slice((page-1) * pageSize, page * pageSize);
+
+        const result = {
+            nextPageExist: nextPageExist,
+            reviews: []
+        };
+        for(const i in reviews) {
+            const review = reviews[i];
+
+            const images = await db.ProductReviewImage.findAll({
+                where: {
+                    'product_review_index': review.index
+                }
+            });
+
+            const additionReviews = await db.ProductAdditionalReview.findAll({
+                where: {
+                    'product_review_index': review.index
+                }
+            });
+
+            result.reviews.push({
+                review: review,
+                images: images,
+                additionReviews: additionReviews
+            });
+        }
+        res.json(result);
     } catch(e) {
+        console.log(e);
         res.status(400).json({
             error: "invalid request"
         });
@@ -164,7 +193,7 @@ router.get('/status', async (req, res) => {
 
     try {
         let token = req.headers['authorization'];
-        token = await util.decodeToken(token);
+        token = await util.decodeToken(token, res);
 
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
@@ -326,7 +355,7 @@ router.post('/', formidable({multiples: true}), async (req, res) => {
 
     try {
         let token = req.headers['authorization'];
-        token = await util.decodeToken(token);
+        token = await util.decodeToken(token, res);
 
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
@@ -457,7 +486,7 @@ router.put('/', formidable({multiples: true}), async (req, res) => {
 
     try {
         let token = req.headers['authorization'];
-        token = await util.decodeToken(token);
+        token = await util.decodeToken(token, res);
 
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
@@ -559,7 +588,7 @@ router.put('/', formidable({multiples: true}), async (req, res) => {
 router.delete('/', async (req, res) => {
     try {
         let token = req.headers['authorization'];
-        token = await util.decodeToken(token);
+        token = await util.decodeToken(token, res);
 
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
@@ -649,7 +678,7 @@ router.post('/addition', async (req, res) => {
 
     try {
         let token = req.headers['authorization'];
-        token = await util.decodeToken(token);
+        token = await util.decodeToken(token, res);
 
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
@@ -721,7 +750,7 @@ router.put('/addition', async (req, res) => {
 
     try {
         let token = req.headers['authorization'];
-        token = await util.decodeToken(token);
+        token = await util.decodeToken(token, res);
 
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
@@ -800,7 +829,7 @@ router.delete('/addition', async (req, res) => {
 
     try {
         let token = req.headers['authorization'];
-        token = await util.decodeToken(token);
+        token = await util.decodeToken(token, res);
 
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
