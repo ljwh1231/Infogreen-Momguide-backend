@@ -74,8 +74,22 @@ router.get('/member/list', async (req, res) => {
         const page = req.query.page ? req.query.page : 1;
         const pageSize = 6;
 
-        const reviews = await member.getProductReviews();
-        res.json(reviews.slice((page-1) * pageSize, page * pageSize));
+        let reviews = await member.getProductReviews();
+        reviews = (reviews.slice((page-1) * pageSize, page * pageSize));
+        const result = [];
+
+        for(const i in reviews) {
+            const review = reviews[i];
+            const additionalReviews = await review.getProductAdditionalReviews();
+            console.log(additionalReviews);
+            console.log("00000000000000000000000")
+            result.push({
+                review: review,
+                recentDate: (additionalReviews.length ? additionalReviews[additionalReviews.length - 1].date : null)
+            });
+        }
+
+        res.json(result);
     } catch(e) {
         res.status(400).json({
             error: "invalid request"
@@ -483,6 +497,8 @@ router.post('/', formidable({multiples: true}), async (req, res) => {
             });
             return;
         }
+
+
         const review = await db.ProductReview.create(reviewObject);
         member.addProductReview(review);
         product.addProductReview(review);
@@ -796,7 +812,25 @@ router.post('/addition', async (req, res) => {
             return;
         }
 
+        const reviews = (await review.getProductAdditionalReviews());
+
         const moment = require('moment');
+        if(reviews.length !== 0) {
+            console.log(moment(reviews[reviews.length-1].date).diff(moment(), 'days'));
+            if(moment().diff(moment(reviews[reviews.length-1].date), 'days') < 28) {
+                res.status(400).json({
+                    error: "can post after one month"
+                });
+                return;
+            }
+            if(reviews[reviews.length-1].ended) {
+                console.log(reviews);
+                res.status(400).json({
+                    error: "already ended review"
+                });
+                return;
+            }
+        }
         const additionalReview = await db.ProductAdditionalReview.create({
             date: moment(),
             content: req.body.content,
@@ -806,6 +840,7 @@ router.post('/addition', async (req, res) => {
         review.addProductAdditionalReview(additionalReview);
         res.json(additionalReview);
     } catch(e) {
+        console.log(e);
         res.status(400).json({
             error: "invalid request"
         });
