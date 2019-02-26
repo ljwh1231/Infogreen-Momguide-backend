@@ -97,6 +97,12 @@ MemberInfo.hasMany(Report);
 Comment.hasMany(Report);
 ProductReview.hasMany(Report);
 
+const PublicAlarm = require('./PublicAlarm')(sequelize, Sequelize);
+const MemberToPublicAlarm = require('./MemberToPublicAlarm')(sequelize, Sequelize);
+
+PublicAlarm.belongsToMany(MemberInfo, {through: MemberToPublicAlarm});
+MemberInfo.belongsToMany(PublicAlarm, {through: MemberToPublicAlarm});
+
 module.exports = {
     CosmeticIngredient,
     CosmeticDB,
@@ -116,5 +122,7 @@ module.exports = {
     ProductAdditionalReview,
     LikeOrHate,
     Report,
+    PublicAlarm,
+    MemberToPublicAlarm,
     sequelize
 };
