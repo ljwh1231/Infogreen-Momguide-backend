@@ -14,6 +14,10 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: false
         },
+        ended: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false
+        }
     }, {
         underscored: true,
         freezeTableName: true,
