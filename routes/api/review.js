@@ -139,10 +139,13 @@ router.get('/product/list', async (req, res) => {
 
         let reviews = await product.getProductReviews();
         const nextPageExist = (reviews.length >= page * pageSize);
+        const totalPages = Math.ceil(reviews.length / pageSize);
         reviews = reviews.slice((page-1) * pageSize, page * pageSize);
+
 
         const result = {
             nextPageExist: nextPageExist,
+            totalPages: totalPages,
             reviews: []
         };
         for(const i in reviews) {
@@ -154,19 +157,62 @@ router.get('/product/list', async (req, res) => {
                 }
             });
 
-            const additionReviews = await db.ProductAdditionalReview.findAll({
+            const additionalReviews = await db.ProductAdditionalReview.findAll({
                 where: {
                     'product_review_index': review.index
                 }
             });
 
+            const reviewOwner = (await db.sequelize.query(`SELECT * FROM member_info WHERE \`index\`=${review.member_info_index}`))[0][0];
+
             result.reviews.push({
+                reviewOwner: reviewOwner,
                 review: review,
                 images: images,
-                additionReviews: additionReviews
+                additionalReviews: additionalReviews
             });
         }
         res.json(result);
+    } catch(e) {
+        console.log(e);
+        res.status(400).json({
+            error: "invalid request"
+        });
+    }
+});
+
+/*
+ * 상품 리뷰 목록 불러오기 : GET /api/review/product/list/count?category=living&id=1
+ * AUTHORIZATION NEEDED
+ */
+
+router.get('/product/list/count', async (req, res) => {
+    if(!req.query.category || !(req.query.category === 'living' || req.query.category === 'cosmetic') ||
+        !req.query.id || isNaN(Number(req.query.id))) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    try {
+        const product = (req.query.category === 'living') ?
+            await db.LivingDB.findOne({
+                where: {
+                    index: Number(req.query.id)
+                }
+            }) :
+            await db.CosmeticDB.findOne({
+                where : {
+                    index: Number(req.query.id)
+                }
+            });
+
+        let reviews = await product.getProductReviews();
+
+        res.json({
+            count: reviews.length
+        });
     } catch(e) {
         console.log(e);
         res.status(400).json({
@@ -251,6 +297,7 @@ router.get('/summary', async (req, res) => {
         res.status(400).json({
             error: "invalid request"
         });
+        return;
     }
 
     try {
@@ -304,6 +351,39 @@ router.get('/summary', async (req, res) => {
         });
     } catch(e) {
         console.log(e);
+        res.status(400).json({
+            error: "invalid request"
+        });
+    }
+});
+
+/*
+ * 리뷰에 해당하는 상품 불러오기: GET /api/review/product?reviewId=1
+ */
+
+router.get('/product', async (req, res) => {
+    if(!req.query.reviewId || isNaN(Number(req.query.reviewId))) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    try {
+        const review = await db.ProductReview.findOne({
+            where: {
+                index: req.query.reviewId
+            }
+        });
+
+        let product;
+        if (review.living_index) {
+            product = await db.sequelize.query(`SELECT * FROM living WHERE \`index\`=${review.index}`);
+        } else {
+            product = await db.sequelize.query(`SELECT * FROM cosmetic WHERE \`index\`=${review.index}`);
+        }
+        res.json(product[0][0]);
+    } catch(e) {
         res.status(400).json({
             error: "invalid request"
         });
@@ -407,7 +487,7 @@ router.post('/', formidable({multiples: true}), async (req, res) => {
         member.addProductReview(review);
         product.addProductReview(review);
         product.rateCount += 1;
-        product.rateCount += reviewObject.rating;
+        product.rateSum += reviewObject.rating;
         await product.save();
 
         let images = req.files.images;
@@ -663,7 +743,8 @@ router.get('/addition', async (req, res) => {
  * AUTHORIZATION NEEDED
  * BODY SAMPlE (JSON) : {
  *  reviewId: 1,
- *  content: 'text'
+ *  content: 'text',
+ *  ended: true
  * }
  */
 
@@ -718,7 +799,8 @@ router.post('/addition', async (req, res) => {
         const moment = require('moment');
         const additionalReview = await db.ProductAdditionalReview.create({
             date: moment(),
-            content: req.body.content
+            content: req.body.content,
+            ended: req.body.ended
         });
 
         review.addProductAdditionalReview(additionalReview);
