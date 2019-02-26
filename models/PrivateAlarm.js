@@ -25,6 +25,14 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.BOOLEAN,
             allowNull: false,
             defaultValue: false
+        },
+        category: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        categoryIndex: {
+            type: DataTypes.BIGINT,
+            allowNull: false
         }
     }, {
         underscored: true,

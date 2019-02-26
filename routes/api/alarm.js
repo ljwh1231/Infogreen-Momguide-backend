@@ -361,16 +361,17 @@ router.delete('/publicAlarm', (req, res) => {
 });
 
 /*
-    > 유저가 로그인 했을 때 알람의 리스트를 불러오는 api
+    > 유저가 로그인 했을 때 전체알람의 리스트를 불러오는 api
     > GET /api/alarm/publicAlarm
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "no such member": 존재하지 않는 회원
+          "unauthorized request": 권한 없는 사용자가 접근
       }
-    > [
-        결과를 배열로 전달. 읽지 않은 알림을 우선적으로 소트해서 보여줌.
-      ]
+    > {
+        Data: 전체 알람 목록을 배열로 전달. notRead: 그 중 해당 유저가 읽지 않은 알람 수
+      }
 */
 router.get('/publicAlarm', (req, res) => {
     let token = req.headers['authorization'];
@@ -395,6 +396,7 @@ router.get('/publicAlarm', (req, res) => {
                 return;
             } else {
                 const publicAlarms = await member.getPublicAlarms();
+                let notRead = 0;
 
                 if (publicAlarms.length > 1) {
                     await publicAlarms.sort((alarm1, alarm2) => {
@@ -402,7 +404,14 @@ router.get('/publicAlarm', (req, res) => {
                             : alarm1.MemberToPublicAlarm.read > alarm2.MemberToPublicAlarm.read ? 1 : 0;
                     });
                 }
-                res.json(publicAlarms);
+
+                for (let i=0; i<publicAlarms.length; ++i) {
+                    if (!publicAlarms[i].dataValues.MemberToPublicAlarm.read) {
+                        notRead += 1;
+                    }
+                }
+
+                res.json({Data: publicAlarms, notRead: notRead});
                 return;
             }
         });
@@ -423,10 +432,11 @@ router.get('/publicAlarm', (req, res) => {
           "invalid request": 올바른 req가 전달되지 않음
           "no such member": 존재하지 않는 회원
           "update failed": 업데이트 실패
+          "unauthorized request": 권한 없는 사용자가 접근
       }
-    > [
-        결과를 배열로 전달. 읽지 않은 알림을 우선적으로 소트해서 보여줌.
-      ]
+    > success: {
+        true: 성공적으로 수정 완료
+      }
 */
 router.put('/publicRead', (req, res) => {
     let token = req.headers['authorization'];
@@ -461,6 +471,138 @@ router.put('/publicRead', (req, res) => {
                             where: {
                                 member_info_index: token.index,
                                 public_alarm_index: publicAlarms[i].dataValues.index
+                            }
+                        }
+                    ).then((result) => {
+                        if (!result) {
+                            res.status(424).json({
+                                error: "update failed"
+                            });
+                            return;
+                        }
+                    });
+                }
+
+                res.json({
+                    success: true
+                });
+                return;
+            }
+        });
+        
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
+/*
+    > 특정 유저의 개인알람의 리스트를 불러오는 api
+    > GET /api/alarm/privateAlarm
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such member": 존재하지 않는 회원
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
+    > {
+        Data: 전체 알람 목록을 배열로 전달. notRead: 그 중 해당 유저가 읽지 않은 알람 수
+      }
+*/
+router.get('/privateAlarm', (req, res) => {
+    let token = req.headers['authorization'];
+
+    util.decodeToken(token, res).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            req.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email,
+                nickName: token.nickName
+            }
+        }).then(async (member) => {
+            if (!member) {
+                res.status(424).json({
+                    error: "no such member"
+                });
+                return;
+            } else {
+                const reviewAlarms = await member.getPrivateAlarms();
+                let notRead = 0;
+
+                for (let i=0; i<reviewAlarms.length; ++i) {
+                    if (!reviewAlarms[i].dataValues.read) {
+                        notRead += 1;
+                    }
+                }
+
+                res.json({Data: reviewAlarms, notRead: notRead});
+                return;
+            }
+        });
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
+/*
+    > 유저가 개인 알림을 열어서 다 읽으면 다 읽었다고 날려주면 읽은 걸로 업데이트해주는 api
+    > PUT /api/alarm/privateRead
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such member": 존재하지 않는 회원
+          "update failed": 업데이트 실패
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
+    > success: {
+        true: 성공적으로 수정 완료
+      }
+*/
+router.put('/privateRead', (req, res) => {
+    let token = req.headers['authorization'];
+
+    util.decodeToken(token, res).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            req.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.MemberInfo.findOne({
+            where: {
+                index: token.index
+            }
+        }).then(async (member) => {
+            if (!member) {
+                res.status(424).json({
+                    error: "no such member"
+                });
+                return;
+            } else {
+                const privateAlarms = await member.getPrivateAlarms();
+
+                for (let i=0; i<privateAlarms.length; ++i) {
+                    await db.PrivateAlarm.update(
+                        {
+                            read: true
+                        },
+                        {
+                            where: {
+                                member_info_index: token.index,
+                                index: privateAlarms[i].dataValues.index
                             }
                         }
                     ).then((result) => {
