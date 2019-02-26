@@ -100,8 +100,11 @@ ProductReview.hasMany(Report);
 const PublicAlarm = require('./PublicAlarm')(sequelize, Sequelize);
 const MemberToPublicAlarm = require('./MemberToPublicAlarm')(sequelize, Sequelize);
 
-PublicAlarm.belongsToMany(MemberInfo, {through: MemberToPublicAlarm});
-MemberInfo.belongsToMany(PublicAlarm, {through: MemberToPublicAlarm});
+PublicAlarm.belongsToMany(MemberInfo, {through: MemberToPublicAlarm, onDelete: 'cascade'});
+MemberInfo.belongsToMany(PublicAlarm, {through: MemberToPublicAlarm, onDelete: 'cascade'});
+
+const PrivateAlarm = require('./PrivateAlarm')(sequelize, Sequelize);
+MemberInfo.hasMany(PrivateAlarm, {onDelete: 'cascade'});
 
 module.exports = {
     CosmeticIngredient,
@@ -124,5 +127,6 @@ module.exports = {
     Report,
     PublicAlarm,
     MemberToPublicAlarm,
+    PrivateAlarm,
     sequelize
 };

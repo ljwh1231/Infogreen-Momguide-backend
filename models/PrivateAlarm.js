@@ -6,7 +6,29 @@ module.exports = (sequelize, DataTypes) => {
             autoIncrement: true,
             primaryKey: true
         },
-        
+        imageUrl: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            validate: {
+                isUrl: true
+            }
+        },
+        content: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        linkUrl: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            validate: {
+                isUrl: true
+            }
+        },
+        read: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false
+        }
     }, {
         underscored: true,
         freezeTableName: true,
