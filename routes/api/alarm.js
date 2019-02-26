@@ -360,5 +360,132 @@ router.delete('/publicAlarm', (req, res) => {
     });
 });
 
+/*
+    > 유저가 로그인 했을 때 알람의 리스트를 불러오는 api
+    > GET /api/alarm/publicAlarm
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such member": 존재하지 않는 회원
+      }
+    > [
+        결과를 배열로 전달. 읽지 않은 알림을 우선적으로 소트해서 보여줌.
+      ]
+*/
+router.get('/publicAlarm', (req, res) => {
+    let token = req.headers['authorization'];
+
+    util.decodeToken(token, res).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            req.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.MemberInfo.findOne({
+            where: {
+                index: token.index
+            }
+        }).then(async (member) => {
+            if (!member) {
+                res.status(424).json({
+                    error: "no such member"
+                });
+                return;
+            } else {
+                const publicAlarms = await member.getPublicAlarms();
+
+                if (publicAlarms.length > 1) {
+                    await publicAlarms.sort((alarm1, alarm2) => {
+                        return alarm1.MemberToPublicAlarm.read < alarm2.MemberToPublicAlarm.read ? -1 
+                            : alarm1.MemberToPublicAlarm.read > alarm2.MemberToPublicAlarm.read ? 1 : 0;
+                    });
+                }
+                res.json(publicAlarms);
+                return;
+            }
+        });
+        
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
+/*
+    > 유저가 알림을 열어서 다 읽으면 다 읽었다고 날려주면 읽은 걸로 업데이트해주는 api
+    > PUT /api/alarm/publicRead
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such member": 존재하지 않는 회원
+          "update failed": 업데이트 실패
+      }
+    > [
+        결과를 배열로 전달. 읽지 않은 알림을 우선적으로 소트해서 보여줌.
+      ]
+*/
+router.put('/publicRead', (req, res) => {
+    let token = req.headers['authorization'];
+
+    util.decodeToken(token, res).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            req.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.MemberInfo.findOne({
+            where: {
+                index: token.index
+            }
+        }).then(async (member) => {
+            if (!member) {
+                res.status(424).json({
+                    error: "no such member"
+                });
+                return;
+            } else {
+                const publicAlarms = await member.getPublicAlarms();
+
+                for (let i=0; i<publicAlarms.length; ++i) {
+                    await db.MemberToPublicAlarm.update(
+                        {
+                            read: true
+                        },
+                        {
+                            where: {
+                                member_info_index: token.index,
+                                public_alarm_index: publicAlarms[i].dataValues.index
+                            }
+                        }
+                    ).then((result) => {
+                        if (!result) {
+                            res.status(424).json({
+                                error: "update failed"
+                            });
+                            return;
+                        }
+                    });
+                }
+
+                res.json({
+                    success: true
+                });
+                return;
+            }
+        });
+        
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
 
 module.exports = router;
