@@ -19,10 +19,7 @@ module.exports = (sequelize, DataTypes) => {
         },
         linkUrl: {
             type: DataTypes.STRING,
-            allowNull: false,
-            validate: {
-                isUrl: true
-            }
+            allowNull: false
         },
         read: {
             type: DataTypes.BOOLEAN,
