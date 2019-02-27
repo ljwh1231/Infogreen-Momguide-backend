@@ -365,7 +365,7 @@ router.delete('/post', (req, res) => {
 
 /*
     > 꿀팁 목록 불러오는 api
-    > GET /api/tip/postList?page=1
+    > GET /api/tip/postList?order=latest&page=1
     > req.query.page로 해당 페이지 넘버를 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
@@ -380,7 +380,14 @@ router.delete('/post', (req, res) => {
 router.get('/postList', (req, res) => {
     let limit = 12;
 
-    if (!req.query.page) {
+    if (!req.query.page || !req.query.order) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    if (req.query.order !== 'latest' && req.query.order !== 'recommend') {
         res.status(400).json({
             error: "invalid request"
         });
@@ -406,8 +413,8 @@ router.get('/postList', (req, res) => {
             limit: limit,
             offset: limit * (Number(req.query.page)-1),
             attributes: ['index', 'title', 'subtitle', 'titleImageUrl', 'created_at']
-        }).then((result) => {
-            if (!result) {
+        }).then((tips) => {
+            if (!tips) {
                 res.status(424).json({
                     error: "find error"
                 });
@@ -420,7 +427,7 @@ router.get('/postList', (req, res) => {
                 } else {
                     nextNum = limit;
                 }
-                res.json({Data: result, totalPages: totalPages, nextNum: nextNum});
+                res.json({Data: tips, totalPages: totalPages, nextNum: nextNum});
                 return;
             }
         });

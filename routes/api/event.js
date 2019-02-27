@@ -382,7 +382,7 @@ router.delete('/post', (req, res) => {
 
 /*
     > 이벤트 목록 불러오는 api
-    > GET /api/event/postList?state=total&page=1
+    > GET /api/event/postList?state=total&?order=latest&page=1
     > req.query.page로 해당 페이지 넘버를 전달, req.query.state로 보기 옵션을 전달(total은 전체, progress는 진행 중인 이벤트, finished는 종료된 이벤트)
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
@@ -397,156 +397,75 @@ router.delete('/post', (req, res) => {
 router.get('/postList', (req, res) => {
     let limit = 12;
     const currentDate = moment();
-
-    moment.tz.setDefault("Asia/Seoul");
-
-    if (!req.query.page) {
-        res.status(400).json({
-            error: "invalid request"
-        });
-        return;
-    }
+    let showCondition = {};
 
     if (req.query.state === 'total') {
-        db.Event.findAndCountAll({
-            where: {}
-        }).then((result) => {
-            if (!result) {
-                res.status(424).json({
-                    error: "find error"
-                });
-                return;
-            }
-    
-            let totalNum = result.count;
-            let totalPages = Math.ceil(totalNum/limit);
-            let nextNum = 0;
-    
-            db.Event.findAll({
-                where: {},
-                limit: limit,
-                offset: limit * (Number(req.query.page)-1),
-                attributes: ['index', 'title', 'subtitle', 'titleImageUrl', 'expirationDate', 'created_at']
-            }).then((result) => {
-                if (!result) {
-                    res.status(424).json({
-                        error: "find error"
-                    });
-                    return;
-                } else {
-                    if (Number(req.query.page) === (totalPages - 1)) {
-                        nextNum = totalNum % limit;
-                    } else if (Number(req.query.page) >= totalPages) {
-                        nextNum = 0;
-                    } else {
-                        nextNum = limit;
-                    }
-                    res.json({Data: result, totalPages: totalPages, nextNum: nextNum});
-                    return;
-                }
-            });
-        });
+        showCondition = {};
     } else if (req.query.state === 'progress') {
-        db.Event.findAndCountAll({
-            where: {
-                expirationDate: { 
-                    $gte: currentDate
-                }
-            }
-        }).then((result) => {
-            if (!result) {
-                res.status(424).json({
-                    error: "find error"
-                });
-                return;
-            }
-    
-            let totalNum = result.count;
-            let totalPages = Math.ceil(totalNum/limit);
-            let nextNum = 0;
-    
-            db.Event.findAll({
-                where: {
-                    expirationDate: { 
-                        $gte: currentDate
-                    }
-                },
-                limit: limit,
-                offset: limit * (Number(req.query.page)-1),
-                attributes: ['title', 'subtitle', 'titleImageUrl', 'expirationDate', 'created_at']
-            }).then((result) => {
-                if (!result) {
-                    res.status(424).json({
-                        error: "find error"
-                    });
-                    return;
-                } else {
-                    if (Number(req.query.page) === (totalPages - 1)) {
-                        nextNum = totalNum % limit;
-                    } else if (Number(req.query.page) >= totalPages) {
-                        nextNum = 0;
-                    } else {
-                        nextNum = limit;
-                    }
-                    res.json({Data: result, totalPages: totalPages, nextNum: nextNum});
-                    return;
-                }
-            });
-        });
+        showCondition = {expirationDate: {$gte: currentDate}};
     } else if (req.query.state === 'finished') {
-        db.Event.findAndCountAll({
-            where: {
-                expirationDate: { 
-                    $lt: currentDate
-                }
-            }
-        }).then((result) => {
-            if (!result) {
-                res.status(424).json({
-                    error: "find error"
-                });
-                return;
-            }
-    
-            let totalNum = result.count;
-            let totalPages = Math.ceil(totalNum/limit);
-            let nextNum = 0;
-    
-            db.Event.findAll({
-                where: {
-                    expirationDate: { 
-                        $lt: currentDate
-                    }
-                },
-                limit: limit,
-                offset: limit * (Number(req.query.page)-1),
-                attributes: ['title', 'subtitle', 'titleImageUrl', 'expirationDate', 'created_at']
-            }).then((result) => {
-                if (!result) {
-                    res.status(424).json({
-                        error: "find error"
-                    });
-                    return;
-                } else {
-                    if (Number(req.query.page) === (totalPages - 1)) {
-                        nextNum = totalNum % limit;
-                    } else if (Number(req.query.page) >= totalPages) {
-                        nextNum = 0;
-                    } else {
-                        nextNum = limit;
-                    }
-                    res.json({Data: result, totalPages: totalPages, nextNum: nextNum});
-                    return;
-                }
-            });
-        });
+        showCondition = {expirationDate: {$lte: currentDate}};
     } else {
         res.status(400).json({
             error: "invalid request"
         });
         return;
     }
-    
+
+    moment.tz.setDefault("Asia/Seoul");
+
+    if (!req.query.page || !req.query.order || !(req.query.order === 'latest') || !(req.query.order === 'recommend')) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    db.Event.findAndCountAll({
+        where: showCondition
+    }).then((result) => {
+        if (!result) {
+            res.status(424).json({
+                error: "find error"
+            });
+            return;
+        }
+
+        let totalNum = result.count;
+        let totalPages = Math.ceil(totalNum/limit);
+        let nextNum = 0;
+
+        if (req.query.order === 'latest') {
+            db.Event.findAll({
+                where: showCondition,
+                limit: limit,
+                offset: limit * (Number(req.query.page)-1),
+                attributes: ['index', 'title', 'subtitle', 'titleImageUrl', 'expirationDate', 'created_at'],
+                order: [['created_at', 'DESC']]
+            }).then((result) => {
+                if (!result) {
+                    res.status(424).json({
+                        error: "find error"
+                    });
+                    return;
+                } else {
+                    if (Number(req.query.page) === (totalPages - 1)) {
+                        nextNum = totalNum % limit;
+                    } else if (Number(req.query.page) >= totalPages) {
+                        nextNum = 0;
+                    } else {
+                        nextNum = limit;
+                    }
+                    res.json({Data: result, totalPages: totalPages, nextNum: nextNum});
+                    return;
+                }
+            });
+        } else if (req.query.order === 'recommend') {
+            for (let i=0; i<result.length; ++i) {
+                let likeCount = await result[i].getLikeOrHates().count;
+            }
+        }
+    });
 });
 
 /*
