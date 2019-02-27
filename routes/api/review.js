@@ -96,7 +96,8 @@ router.get('/member/list', async (req, res) => {
 });
 
 /*
- * 상품 리뷰 목록 불러오기 : GET /api/review/product/list?category=living&id=1&page=1
+ * 상품 리뷰 목록 불러오기 : GET /api/review/product/list?category=living&id=1&page=1&sorting=late
+ * sorting : late or like or rating
  * AUTHORIZATION NEEDED
  */
 
@@ -149,7 +150,32 @@ router.get('/product/list', async (req, res) => {
         const page = req.query.page ? (Number(req.query.page) > 0 ? Number(req.query.page) : 1) : 1;
         const pageSize = 6;
 
+        const sorting = (req.query.sorting && (req.query.sorting === 'late' || req.query.sorting === 'like' || req.query.sorting === 'rating')) ?
+            req.query.sorting : 'late';
         let reviews = await product.getProductReviews();
+
+        if(sorting === 'late') {
+            reviews.reverse();
+        } else if(sorting === 'like') {
+            for(const i in reviews) {
+                const likeList = await reviews[i].getLikeOrHates();
+                reviews[i].dataValues.likeCount = likeList.length;
+            }
+            reviews.sort((a, b) => {
+                return a.dataValues.likeCount > b.dataValues.likeCount ? -1
+                    : (a.dataValues.likeCount < b.dataValues.likeCount ? 1 : 0)
+            });
+            console.log(reviews);
+        } else {
+            reviews.sort((a, b) => {
+                if(a.dataValues.rating > b.dataValues.rating)
+                    return -1;
+                if(a.dataValues.rating < b.dataValues.rating)
+                    return 1;
+                return 0;
+            });
+        }
+
         const nextPageExist = (reviews.length >= page * pageSize);
         const totalPages = Math.ceil(reviews.length / pageSize);
         reviews = reviews.slice((page-1) * pageSize, page * pageSize);
@@ -306,6 +332,7 @@ router.get('/status', async (req, res) => {
 
 /*
  * 상품에 대한 전체 정보 요약 불러오기 : GET /api/review/summary?category=living&id=1
+ * sorting : late or like or rating
  */
 
 router.get('/summary', async (req, res) => {
@@ -332,6 +359,13 @@ router.get('/summary', async (req, res) => {
                     index: id
                 }
             });
+
+        if(!product) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
 
         const reviews = await product.getProductReviews();
         if(reviews.length === 0) {
@@ -404,6 +438,105 @@ router.get('/product', async (req, res) => {
         }
         res.json(product[0][0]);
     } catch(e) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+    }
+});
+
+/*
+ * 베스트 리뷰 불러오기 : GET /api/review/best?category=living&id=1
+ * AUTHORIZATION OPTION
+ */
+
+router.get('/best', async (req, res) => {
+    const category = req.query.category;
+    const id = req.query.id;
+
+    if(!category || !(category === 'living' || category === 'cosmetic') ||
+        !id || isNaN(Number(id))) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    try {
+        let token = req.headers['authorization'];
+        token = token ? (await util.decodeToken(token, res)) : null;
+
+        const member = token ? (await db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email,
+                nickName: token.nickName
+            }
+        })) : null;
+
+        const product = category === 'living' ?
+            await db.LivingDB.findOne({
+                where: {
+                    index: id
+                }
+            }) :
+            await db.CosmeticDB.findOne({
+                where: {
+                    index: id
+                }
+            });
+
+        const reviews = await product.getProductReviews();
+
+        if (!reviews || !product) {
+            res.status(424).json({
+                error: "find error"
+            });
+            return;
+        }
+        if(reviews.length === 0) {
+            res.json({});
+            return;
+        }
+
+        for (let i = 0; i < reviews.length; ++i) {
+            const likeList = await reviews[i].getLikeOrHates();
+            reviews[i].dataValues.likeCount = likeList.length;
+        }
+        reviews.sort((review1, review2) => {
+            return review1.dataValues.likeCount > review2.dataValues.likeCount ? -1
+                : (review1.dataValues.likeCount < review2.dataValues.likeCount ? 1 : 0);
+        });
+
+        const review = reviews[0];
+        const imagesPromise = db.ProductReviewImage.findAll({
+            where: {
+                'product_review_index': review.index
+            }
+        });
+
+        const additionalReviewsPromise = db.ProductAdditionalReview.findAll({
+            where: {
+                'product_review_index': review.index
+            }
+        });
+
+        const reviewOwner = (await db.sequelize.query(`SELECT * FROM member_info WHERE \`index\`=${review.member_info_index}`))[0][0];
+        const images = await imagesPromise;
+        const additionalReviews = await additionalReviewsPromise;
+
+        const like = member ? (await db.sequelize.query(
+            `SELECT * FROM like_or_hate WHERE member_info_index=${member.index} AND product_review_index=${review.index};`,
+            { type: db.sequelize.QueryTypes.SELECT })).length > 0 : false;
+
+        res.json({
+            reviewOwner: reviewOwner,
+            review: review,
+            images: images,
+            additionalReviews: additionalReviews,
+            like: like
+        });
+    } catch(e) {
+        console.log(e);
         res.status(400).json({
             error: "invalid request"
         });
