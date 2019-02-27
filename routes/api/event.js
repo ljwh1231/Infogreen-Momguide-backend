@@ -382,8 +382,9 @@ router.delete('/post', (req, res) => {
 
 /*
     > 이벤트 목록 불러오는 api
-    > GET /api/event/postList?state=total&?order=latest&page=1
+    > GET /api/event/postList?state=total&order=latest&page=1
     > req.query.page로 해당 페이지 넘버를 전달, req.query.state로 보기 옵션을 전달(total은 전체, progress는 진행 중인 이벤트, finished는 종료된 이벤트)
+      req.query.order로 정렬 방식을 전달(latest가 최신순, recommend는 추천순)
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "find error": 탐색 오류
@@ -414,7 +415,14 @@ router.get('/postList', (req, res) => {
 
     moment.tz.setDefault("Asia/Seoul");
 
-    if (!req.query.page || !req.query.order || !(req.query.order === 'latest') || !(req.query.order === 'recommend')) {
+    if (!req.query.page || !req.query.order) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    if ((req.query.order !== 'latest') && (req.query.order !== 'recommend')) {
         res.status(400).json({
             error: "invalid request"
         });
@@ -442,7 +450,7 @@ router.get('/postList', (req, res) => {
                 offset: limit * (Number(req.query.page)-1),
                 attributes: ['index', 'title', 'subtitle', 'titleImageUrl', 'expirationDate', 'created_at'],
                 order: [['created_at', 'DESC']]
-            }).then((result) => {
+            }).then(async (result) => {
                 if (!result) {
                     res.status(424).json({
                         error: "find error"
@@ -453,6 +461,8 @@ router.get('/postList', (req, res) => {
                         nextNum = totalNum % limit;
                     } else if (Number(req.query.page) >= totalPages) {
                         nextNum = 0;
+                    } else if (result.length === 0) {
+                        nextNum = 0;
                     } else {
                         nextNum = limit;
                     }
@@ -461,9 +471,42 @@ router.get('/postList', (req, res) => {
                 }
             });
         } else if (req.query.order === 'recommend') {
-            for (let i=0; i<result.length; ++i) {
-                let likeCount = await result[i].getLikeOrHates().count;
-            }
+            db.Event.findAll({
+                where: showCondition,
+                attributes: ['index', 'title', 'subtitle', 'titleImageUrl', 'expirationDate', 'created_at']
+            }).then(async (events) => {
+                if (!events) {
+                    res.status(424).json({
+                        error: "find error"
+                    });
+                    return;
+                } else {
+                    for (let i=0; i<events.length; ++i) {
+                        const likeList = await events[i].getLikeOrHates();
+                        events[i].dataValues.likeCount = likeList.length;
+                    }
+                    events.sort((event1, event2) => {
+                        return event1.dataValues.likeCount > event2.dataValues.likeCount ? -1
+                            : (event1.dataValues.likeCount < event2.dataValues.likeCount ? 1 : 0)
+                    });
+
+                    if (Number(req.query.page) === totalPages) {
+                        eventsSliced = events.slice(((Number(req.query.page))-1) * limit, events.length);
+                    } else {
+                        eventsSliced = events.slice(((Number(req.query.page))-1) * limit, Number(req.query.page) * limit);
+                    }
+
+                    if (Number(req.query.page) === (totalPages - 1)) {
+                        nextNum = totalNum % limit;
+                    } else if (Number(req.query.page) >= totalPages) {
+                        nextNum = 0;
+                    } else {
+                        nextNum = limit;
+                    }
+                    res.json({Data: eventsSliced, totalPages: totalPages, nextNum: nextNum});
+                    return;
+                }
+            });
         }
     });
 });

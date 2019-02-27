@@ -366,7 +366,7 @@ router.delete('/post', (req, res) => {
 /*
     > 꿀팁 목록 불러오는 api
     > GET /api/tip/postList?order=latest&page=1
-    > req.query.page로 해당 페이지 넘버를 전달
+    > req.query.page로 해당 페이지 넘버를 전달, req.query.order로 정렬 방식을 전달.(latest는 최신순, recommend는 추천순)
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "find error": 탐색 오류
@@ -408,29 +408,71 @@ router.get('/postList', (req, res) => {
         let totalPages = Math.ceil(totalNum/limit);
         let nextNum = 0;
 
-        db.HoneyTip.findAll({
-            where: {},
-            limit: limit,
-            offset: limit * (Number(req.query.page)-1),
-            attributes: ['index', 'title', 'subtitle', 'titleImageUrl', 'created_at']
-        }).then((tips) => {
-            if (!tips) {
-                res.status(424).json({
-                    error: "find error"
-                });
-                return;
-            } else {
-                if (Number(req.query.page) === (totalPages - 1)) {
-                    nextNum = totalNum % limit;
-                } else if (Number(req.query.page) === totalPages) {
-                    nextNum = 0;
+        if (req.query.order === 'latest') {
+            db.HoneyTip.findAll({
+                where: {},
+                limit: limit,
+                offset: limit * (Number(req.query.page)-1),
+                attributes: ['index', 'title', 'subtitle', 'titleImageUrl', 'created_at'],
+                order: [['created_at', 'DESC']]
+            }).then((tips) => {
+                if (!tips) {
+                    res.status(424).json({
+                        error: "find error"
+                    });
+                    return;
                 } else {
-                    nextNum = limit;
+                    if (Number(req.query.page) === (totalPages - 1)) {
+                        nextNum = totalNum % limit;
+                    } else if (Number(req.query.page) === totalPages) {
+                        nextNum = 0;
+                    } else {
+                        nextNum = limit;
+                    }
+                    res.json({Data: tips, totalPages: totalPages, nextNum: nextNum});
+                    return;
                 }
-                res.json({Data: tips, totalPages: totalPages, nextNum: nextNum});
-                return;
-            }
-        });
+            });
+        } else if (req.query.order === 'recommend') {
+            db.HoneyTip.findAll({
+                where: {},
+                attributes: ['index', 'title', 'subtitle', 'titleImageUrl', 'created_at']
+            }).then(async (tips) => {
+                if (!tips) {
+                    res.status(424).json({
+                        error: "find error"
+                    });
+                    return;
+                } else {
+                    for (let i=0; i<tips.length; ++i) {
+                        const likeList = await tips[i].getLikeOrHates();
+                        tips[i].dataValues.likeCount = likeList.length;
+                    }
+                    tips.sort((tip1, tip2) => {
+                        return tip1.dataValues.likeCount > tip2.dataValues.likeCount ? -1
+                            : (tip1.dataValues.likeCount < tip2.dataValues.likeCount ? 1 : 0)
+                    });
+
+                    if (Number(req.query.page) === totalPages) {
+                        tipsSliced = tips.slice(((Number(req.query.page))-1) * limit, tips.length);
+                    } else {
+                        tipsSliced = tips.slice(((Number(req.query.page))-1) * limit, Number(req.query.page) * limit);
+                    }
+
+                    if (Number(req.query.page) === (totalPages - 1)) {
+                        nextNum = totalNum % limit;
+                    } else if (Number(req.query.page) >= totalPages) {
+                        nextNum = 0;
+                    } else {
+                        nextNum = limit;
+                    }
+                    res.json({Data: tipsSliced, totalPages: totalPages, nextNum: nextNum});
+                    return;
+                }
+            });
+        }
+
+        
     });
 });
 
