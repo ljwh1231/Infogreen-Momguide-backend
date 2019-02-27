@@ -7,6 +7,7 @@ const bcrypt = require('bcrypt-nodejs');
 const jwt = require('jsonwebtoken');
 const formidable = require('express-formidable');
 const sgMail = require('@sendgrid/mail');
+const Sequelize = require('sequelize');
 
 const db = require("../../models/index");
 const config = require('../../config/config');
@@ -88,6 +89,8 @@ async function findProduct(prevResult) {
           "no file input": 파일이 전달되지 않음
           "s3 store failed": s3 버켓 안에 이미지 저장 실패
           "member creation failed": db안에 회원정보 생성 실패
+          "mailchimp registraion failed": 메일 침프에 정보 등록 실패
+          "Validation error": db에 넣으려는 value가 조건에 맞지 않은 value
       }
     > result: {
         db안에 생성된 회원정보가 전달
@@ -222,7 +225,7 @@ router.post('/register', formidable(), (req, res) => {
                                         infoObj.photoUrl = config.s3Url + params.Key;
                                         db.MemberInfo.create(
                                             infoObj
-                                        ).done((result) => {
+                                        ).then((result) => {
                                             if (!result) {
                                                 res.status(424).json({
                                                     error: "member creation failed"
@@ -242,7 +245,7 @@ router.post('/register', formidable(), (req, res) => {
                 });
             } else {
                 res.status(400).json({
-                    error: "invalid request"
+                    error: "mailchimp registraion failed"
                 });
                 return;
             }

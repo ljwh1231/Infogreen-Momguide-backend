@@ -88,6 +88,7 @@ const LikeOrHate = require('./LikeOrHate')(sequelize, Sequelize);
 
 MemberInfo.hasMany(LikeOrHate);
 Comment.hasMany(LikeOrHate);
+HoneyTip.hasMany(LikeOrHate);
 Event.hasMany(LikeOrHate);
 ProductReview.hasMany(LikeOrHate);
 

@@ -496,7 +496,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
 /*
     > 성분 분석 요청 수정
     > PUT /api/ask/editIngredAnal?index=1
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. form data로 데이터 전달. 각 데이터의 이름은 디비와 통일. 수정하고자 하는 요청의 index를 req.query.index로 전달
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. form data로 데이터 전달. 각 데이터의 이름은 디비와 통일. 
     > 필수정보: title(포스트 제목), isCosmetic(제품 종류. 화장품이면 true, 생활화학제품은 false), requestContent(요청내용)
     > 선택정보: requestFile(요청 제품 사진. 유저가 업로드하지 않으면 그냥 보내지 않기. 제품 사진이 있었는데 없애는 경우도 프론트에서 사진 없앤 후 api에는 사진을 안 보내면 됨.)
     > error: {
@@ -858,6 +858,54 @@ router.get('/ingredAnal', (req, res) => {
             }
         });
 
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
+/*
+    > 성분 분석 요청 포스트 하나 불러오기
+    > GET /api/ask/ingredAnalPost?index=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.index로 해당 포스트의 index 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such post": 존재하지 않는 포스트
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
+    > {
+        db 안의 결과를 전달
+      }
+*/
+router.get('/ingredAnalPost', (req, res) => {
+    let token = req.headers['authorization'];
+
+    decodeToken(res, token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.IngredientAnalysis.findOne({
+            where: {
+                index: Number(req.query.index),
+                memberIndex: token.index
+            }
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such post"
+                });
+                return;
+            } else {
+                res.json(result);
+                return;
+            }
+        });
     }).catch((error) => {
         res.status(403).json({
             error: "unauthorized request"
@@ -1452,7 +1500,7 @@ router.delete('/cancelOneToOne', (req, res) => {
 });
 
 /*
-    > 1:1 문의 불러오기
+    > 1:1 문의 리스트 불러오기
     > GET /api/ask/oneToOne?page=1
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.page로 page 넘버를 전달
     > error: {
@@ -1510,6 +1558,54 @@ router.get('/oneToOne', (req, res) => {
             }
         });
 
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
+});
+
+/*
+    > 1대1 문의 포스트 하나 불러오기
+    > GET /api/ask/oneToOnePost?index=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.index로 해당 포스트의 index 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such post": 존재하지 않는 포스트
+          "unauthorized request": 권한 없는 사용자가 접근
+      }
+    > {
+        db 안의 결과를 전달
+      }
+*/
+router.get('/oneToOnePost', (req, res) => {
+    let token = req.headers['authorization'];
+
+    decodeToken(res, token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.OneToOneQuestion.findOne({
+            where: {
+                index: Number(req.query.index),
+                memberIndex: token.index
+            }
+        }).then((result) => {
+            if (!result) {
+                res.status(424).json({
+                    error: "no such post"
+                });
+                return;
+            } else {
+                res.json(result);
+                return;
+            }
+        });
     }).catch((error) => {
         res.status(403).json({
             error: "unauthorized request"

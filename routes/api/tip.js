@@ -365,8 +365,8 @@ router.delete('/post', (req, res) => {
 
 /*
     > 꿀팁 목록 불러오는 api
-    > GET /api/tip/postList?page=1
-    > req.query.page로 해당 페이지 넘버를 전달
+    > GET /api/tip/postList?order=latest&page=1
+    > req.query.page로 해당 페이지 넘버를 전달, req.query.order로 정렬 방식을 전달.(latest는 최신순, recommend는 추천순)
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "find error": 탐색 오류
@@ -380,7 +380,14 @@ router.delete('/post', (req, res) => {
 router.get('/postList', (req, res) => {
     let limit = 12;
 
-    if (!req.query.page) {
+    if (!req.query.page || !req.query.order) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    if (req.query.order !== 'latest' && req.query.order !== 'recommend') {
         res.status(400).json({
             error: "invalid request"
         });
@@ -401,29 +408,71 @@ router.get('/postList', (req, res) => {
         let totalPages = Math.ceil(totalNum/limit);
         let nextNum = 0;
 
-        db.HoneyTip.findAll({
-            where: {},
-            limit: limit,
-            offset: limit * (Number(req.query.page)-1),
-            attributes: ['title', 'subtitle', 'titleImageUrl', 'created_at']
-        }).then((result) => {
-            if (!result) {
-                res.status(424).json({
-                    error: "find error"
-                });
-                return;
-            } else {
-                if (Number(req.query.page) === (totalPages - 1)) {
-                    nextNum = totalNum % limit;
-                } else if (Number(req.query.page) === totalPages) {
-                    nextNum = 0;
+        if (req.query.order === 'latest') {
+            db.HoneyTip.findAll({
+                where: {},
+                limit: limit,
+                offset: limit * (Number(req.query.page)-1),
+                attributes: ['index', 'title', 'subtitle', 'titleImageUrl', 'created_at'],
+                order: [['created_at', 'DESC']]
+            }).then((tips) => {
+                if (!tips) {
+                    res.status(424).json({
+                        error: "find error"
+                    });
+                    return;
                 } else {
-                    nextNum = limit;
+                    if (Number(req.query.page) === (totalPages - 1)) {
+                        nextNum = totalNum % limit;
+                    } else if (Number(req.query.page) === totalPages) {
+                        nextNum = 0;
+                    } else {
+                        nextNum = limit;
+                    }
+                    res.json({Data: tips, totalPages: totalPages, nextNum: nextNum});
+                    return;
                 }
-                res.json({Data: result, totalPages: totalPages, nextNum: nextNum});
-                return;
-            }
-        });
+            });
+        } else if (req.query.order === 'recommend') {
+            db.HoneyTip.findAll({
+                where: {},
+                attributes: ['index', 'title', 'subtitle', 'titleImageUrl', 'created_at']
+            }).then(async (tips) => {
+                if (!tips) {
+                    res.status(424).json({
+                        error: "find error"
+                    });
+                    return;
+                } else {
+                    for (let i=0; i<tips.length; ++i) {
+                        const likeList = await tips[i].getLikeOrHates();
+                        tips[i].dataValues.likeCount = likeList.length;
+                    }
+                    tips.sort((tip1, tip2) => {
+                        return tip1.dataValues.likeCount > tip2.dataValues.likeCount ? -1
+                            : (tip1.dataValues.likeCount < tip2.dataValues.likeCount ? 1 : 0)
+                    });
+
+                    if (Number(req.query.page) === totalPages) {
+                        tipsSliced = tips.slice(((Number(req.query.page))-1) * limit, tips.length);
+                    } else {
+                        tipsSliced = tips.slice(((Number(req.query.page))-1) * limit, Number(req.query.page) * limit);
+                    }
+
+                    if (Number(req.query.page) === (totalPages - 1)) {
+                        nextNum = totalNum % limit;
+                    } else if (Number(req.query.page) >= totalPages) {
+                        nextNum = 0;
+                    } else {
+                        nextNum = limit;
+                    }
+                    res.json({Data: tipsSliced, totalPages: totalPages, nextNum: nextNum});
+                    return;
+                }
+            });
+        }
+
+        
     });
 });
 
@@ -671,6 +720,7 @@ router.put('/comment', (req, res) => {
     > 유저가 팁 댓글에 대댓글을 작성하는 api
     > POST /api/tip/childComment
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.content로 댓글 내용, req.body.commentIndex로 해당 댓글의 index를 전달
+      req.query.page에 해당 페이지 넘버를 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "no such comment": 존재하지 않는 댓글
@@ -766,21 +816,25 @@ router.post('/childComment', (req, res) => {
 
 /*
     > 팁 포스트 하나의 본문과 그 딸린 댓글들을 불러오는 api
-    > GET /api/tip/post?index=1
-    > req.query.index 해당 팁의 index를 전달
+    > GET /api/tip/post?index=1?page=1
+    > req.query.index 해당 팁의 index를 전달, req.query.page에 해당 페이지 넘버를 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "no such post": 존재하지 않는 포스트
           "find error": db에 있는 정보를 가져오는 데에 문제 발생
           "unauthorized request": 권한 없는 접근
       }
-    > [
-        댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
-        like, hate는 로그인한 유저가 해당 댓글에 좋아요/싫어요를 했는지의 여부를 전달. 만약 둘 다 하지 않았거나 로그인하지 않은 상태라면 둘 다 false를 전달. 
-      ]
+    > {
+        tip: 꿀팁 본문,
+        comments: 댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
+            like, hate는 로그인한 유저가 해당 댓글에 좋아요/싫어요를 했는지의 여부를 전달. 만약 둘 다 하지 않았거나 로그인하지 않은 상태라면 둘 다 false를 전달.
+        totalPages: 전체 페이지
+      }
 */
 router.get('/post', (req, res) => {
-    if (!req.query.index) {
+    const limit = 10;
+
+    if (!req.query.index || !req.query.page) {
         res.status(400).json({
             error: "invalid request"
         });
@@ -805,7 +859,13 @@ router.get('/post', (req, res) => {
                     });
                     return;
                 } else {
-                    for (let i=0; i<comments.length; ++i) {
+                    const totalPages = Math.ceil(comments.length/limit);
+                    const pagedComments = await tip.getComments({
+                        limit: limit,
+                        offset: limit * (Number(req.query.page)-1)
+                    });
+
+                    for (let i=0; i<pagedComments.length; ++i) {
                         let like = false;
                         let hate = false;
 
@@ -827,7 +887,7 @@ router.get('/post', (req, res) => {
                             const likeOrHate = await db.LikeOrHate.findAll({
                                 where: {
                                     member_info_index: token.index,
-                                    comment_index: comments[i].dataValues.index
+                                    comment_index: pagedComments[i].dataValues.index
                                 }
                             });
 
@@ -843,8 +903,8 @@ router.get('/post', (req, res) => {
                             }
                         }
 
-                        if (comments[i].dataValues.isDeleted) {
-                            comments[i].dataValues.creator = {};
+                        if (pagedComments[i].dataValues.isDeleted) {
+                            pagedComments[i].dataValues.creator = {};
                         } else {
                             await db.MemberInfo.findOne({
                                 attributes: [
@@ -852,7 +912,7 @@ router.get('/post', (req, res) => {
                                     'hasChild', 'childBirthYear', 'childBirthMonth', 'childBirthDay'
                                 ],
                                 where: {
-                                    index: comments[i].dataValues.member_info_index
+                                    index: pagedComments[i].dataValues.member_info_index
                                 }
                             }).then((result) => {
                                 if (!result) {
@@ -861,14 +921,14 @@ router.get('/post', (req, res) => {
                                     });
                                     return;
                                 } else {
-                                    comments[i].dataValues.creator = result.dataValues;
-                                    comments[i].dataValues.like = like;
-                                    comments[i].dataValues.hate = hate;
+                                    pagedComments[i].dataValues.creator = result.dataValues;
+                                    pagedComments[i].dataValues.like = like;
+                                    pagedComments[i].dataValues.hate = hate;
                                 }
                             });
                         }
                     }
-                    res.json(comments);
+                    res.json({tip: tip, comments: pagedComments, totalPages: totalPages});
                     return;
                 }
             });
@@ -878,7 +938,7 @@ router.get('/post', (req, res) => {
 
 /*
     > 팁 포스트의 특정 댓글의 대댓글들을 불러오는 api
-    > GET /api/tip/childComment?index=1
+    > GET /api/tip/childComment?index=1?page=1
     > req.query.index 해당 댓글의 index를 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
@@ -887,13 +947,16 @@ router.get('/post', (req, res) => {
           "find error": db에 있는 정보를 가져오는 데에 문제 발생
           "unauthorized request": 권한 없는 접근
       }
-    > [
-        댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
-        like, hate는 로그인한 유저가 해당 댓글에 좋아요/싫어요를 했는지의 여부를 전달. 만약 둘 다 하지 않았거나 로그인하지 않은 상태라면 둘 다 false를 전달. 
-      ]
+    > {
+        childComments: 대댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
+            like, hate는 로그인한 유저가 해당 댓글에 좋아요/싫어요를 했는지의 여부를 전달. 만약 둘 다 하지 않았거나 로그인하지 않은 상태라면 둘 다 false를 전달.
+        totalPages: 전체 페이지
+      }
 */
 router.get('/childComment', (req, res) => {
-    if (!req.query.index) {
+    const limit = 10;
+
+    if (!req.query.index || !req.query.page) {
         res.status(400).json({
             error: "invalid request"
         });
@@ -927,7 +990,16 @@ router.get('/childComment', (req, res) => {
                     });
                     return;
                 } else {
-                    for (let i=0; i<childComments.length; ++i) {
+                    const totalPages = Math.ceil(childComments.length/limit);
+                    const pagedChildComments = await db.Comment.findAll({
+                        where: {
+                            parentIndex: comment.dataValues.index
+                        },
+                        limit: limit,
+                        offset: limit * (Number(req.query.page)-1)
+                    });
+
+                    for (let i=0; i<pagedChildComments.length; ++i) {
                         let like = false;
                         let hate = false;
 
@@ -949,7 +1021,7 @@ router.get('/childComment', (req, res) => {
                             const likeOrHate = await db.LikeOrHate.findAll({
                                 where: {
                                     member_info_index: token.index,
-                                    comment_index: childComments[i].dataValues.index
+                                    comment_index: pagedChildComments[i].dataValues.index
                                 }
                             });
 
@@ -965,8 +1037,8 @@ router.get('/childComment', (req, res) => {
                             }
                         }
 
-                        if (childComments[i].dataValues.isDeleted) {
-                            childComments[i].dataValues.creator = {};
+                        if (pagedChildComments[i].dataValues.isDeleted) {
+                            pagedChildComments[i].dataValues.creator = {};
                         } else {
                             await db.MemberInfo.findOne({
                                 attributes: [
@@ -974,7 +1046,7 @@ router.get('/childComment', (req, res) => {
                                     'hasChild', 'childBirthYear', 'childBirthMonth', 'childBirthDay'
                                 ],
                                 where: {
-                                    index: childComments[i].dataValues.member_info_index
+                                    index: pagedChildComments[i].dataValues.member_info_index
                                 }
                             }).then((result) => {
                                 if (!result) {
@@ -983,19 +1055,98 @@ router.get('/childComment', (req, res) => {
                                     });
                                     return;
                                 } else {
-                                    childComments[i].dataValues.creator = result.dataValues;
-                                    childComments[i].dataValues.like = like;
-                                    childComments[i].dataValues.hate = hate;
+                                    pagedChildComments[i].dataValues.creator = result.dataValues;
+                                    pagedChildComments[i].dataValues.like = like;
+                                    pagedChildComments[i].dataValues.hate = hate;
                                 }
                             });
                         }
                     }
-                    res.json(childComments);
+                    res.json({childComments: pagedChildComments, totalPages: totalPages});
                     return;
                 }
             });
         }
     });
+});
+
+/*
+    > 유저가 해당 팁 포스트를 열었을 때 좋아요를 했는지 안했는지 체크하는 api
+    > GET /api/tip/post/like?index=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.index로 확인하고자 하는 이벤트의 index 전달.
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such event": 존재하지 않는 이벤트
+          "unauthorized request": 권한 없는 접근
+      }
+    > like: {
+        true: 유저가 이 팁에 좋아요를 했음
+        false: 유저가 이 팁에 좋아요를 하지 않았음
+      }
+*/
+router.get('/post/like', (req, res) => {
+    if (!req.headers['authorization']) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    let token = req.headers['authorization'];
+
+    decodeToken(res, token).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (!req.query.index) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.HoneyTip.findOne({
+            where: {
+                index: Number(req.query.index)
+            }
+        }).then((tip) => {
+            if (!tip) {
+                res.status(424).json({
+                    error: "no such tip"
+                });
+                return;
+            } else {
+                db.LikeOrHate.findOne({
+                    where: {
+                        member_info_index: token.index,
+                        honey_tip_index: Number(req.query.index),
+                        assessment: true
+                    }
+                }).then((result) => {
+                    if (!result) {
+                        res.json({
+                            like: false
+                        });
+                        return;
+                    } else {
+                        res.json({
+                            like: true
+                        });
+                        return;
+                    }
+                });
+            }
+        });
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });    
 });
 
 module.exports = router;
