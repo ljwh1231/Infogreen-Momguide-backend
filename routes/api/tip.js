@@ -859,6 +859,7 @@ router.get('/post', (req, res) => {
                     });
                     return;
                 } else {
+                    const totalNum = comments.length;
                     const totalPages = Math.ceil(comments.length/limit);
                     const pagedComments = await tip.getComments({
                         limit: limit,
@@ -928,7 +929,7 @@ router.get('/post', (req, res) => {
                             });
                         }
                     }
-                    res.json({tip: tip, comments: pagedComments, totalPages: totalPages});
+                    res.json({tip: tip, comments: pagedComments, totalPages: totalPages, totalNum: totalNum});
                     return;
                 }
             });

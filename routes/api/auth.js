@@ -225,7 +225,7 @@ router.post('/register', formidable(), (req, res) => {
                                         infoObj.photoUrl = config.s3Url + params.Key;
                                         db.MemberInfo.create(
                                             infoObj
-                                        ).then((result) => {
+                                        ).done((result) => {
                                             if (!result) {
                                                 res.status(424).json({
                                                     error: "member creation failed"
