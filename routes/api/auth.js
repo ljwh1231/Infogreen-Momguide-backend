@@ -244,7 +244,7 @@ router.post('/register', formidable(), (req, res) => {
                     }
                 });
             } else {
-                res.status(400).json({
+                res.status(424).json({
                     error: "mailchimp registraion failed"
                 });
                 return;
