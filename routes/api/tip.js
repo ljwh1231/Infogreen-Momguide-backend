@@ -766,7 +766,7 @@ router.post('/childComment', (req, res) => {
 
 /*
     > 팁 포스트 하나의 본문과 그 딸린 댓글들을 불러오는 api
-    > GET /api/tip/post?index=1
+    > GET /api/tip/post?index=1?page=1
     > req.query.index 해당 팁의 index를 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
@@ -780,7 +780,9 @@ router.post('/childComment', (req, res) => {
       ]
 */
 router.get('/post', (req, res) => {
-    if (!req.query.index) {
+    const limit = 10;
+
+    if (!req.query.index || !req.query.page) {
         res.status(400).json({
             error: "invalid request"
         });
@@ -805,7 +807,13 @@ router.get('/post', (req, res) => {
                     });
                     return;
                 } else {
-                    for (let i=0; i<comments.length; ++i) {
+                    const totalPages = Math.ceil(comments.length/limit);
+                    const pagedComments = await tip.getComments({
+                        limit: limit,
+                        offset: limit * (Number(req.query.page)-1)
+                    });
+
+                    for (let i=0; i<pagedComments.length; ++i) {
                         let like = false;
                         let hate = false;
 
@@ -827,7 +835,7 @@ router.get('/post', (req, res) => {
                             const likeOrHate = await db.LikeOrHate.findAll({
                                 where: {
                                     member_info_index: token.index,
-                                    comment_index: comments[i].dataValues.index
+                                    comment_index: pagedComments[i].dataValues.index
                                 }
                             });
 
@@ -843,8 +851,8 @@ router.get('/post', (req, res) => {
                             }
                         }
 
-                        if (comments[i].dataValues.isDeleted) {
-                            comments[i].dataValues.creator = {};
+                        if (pagedComments[i].dataValues.isDeleted) {
+                            pagedComments[i].dataValues.creator = {};
                         } else {
                             await db.MemberInfo.findOne({
                                 attributes: [
@@ -852,7 +860,7 @@ router.get('/post', (req, res) => {
                                     'hasChild', 'childBirthYear', 'childBirthMonth', 'childBirthDay'
                                 ],
                                 where: {
-                                    index: comments[i].dataValues.member_info_index
+                                    index: pagedComments[i].dataValues.member_info_index
                                 }
                             }).then((result) => {
                                 if (!result) {
@@ -861,14 +869,14 @@ router.get('/post', (req, res) => {
                                     });
                                     return;
                                 } else {
-                                    comments[i].dataValues.creator = result.dataValues;
-                                    comments[i].dataValues.like = like;
-                                    comments[i].dataValues.hate = hate;
+                                    pagedComments[i].dataValues.creator = result.dataValues;
+                                    pagedComments[i].dataValues.like = like;
+                                    pagedComments[i].dataValues.hate = hate;
                                 }
                             });
                         }
                     }
-                    res.json({tip: tip, comments: comments});
+                    res.json({tip: tip, comments: pagedComments, totalPages: totalPages});
                     return;
                 }
             });
@@ -878,7 +886,7 @@ router.get('/post', (req, res) => {
 
 /*
     > 팁 포스트의 특정 댓글의 대댓글들을 불러오는 api
-    > GET /api/tip/childComment?index=1
+    > GET /api/tip/childComment?index=1?page=1
     > req.query.index 해당 댓글의 index를 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
@@ -893,7 +901,9 @@ router.get('/post', (req, res) => {
       ]
 */
 router.get('/childComment', (req, res) => {
-    if (!req.query.index) {
+    const limit = 10;
+
+    if (!req.query.index || !req.query.page) {
         res.status(400).json({
             error: "invalid request"
         });
@@ -927,7 +937,16 @@ router.get('/childComment', (req, res) => {
                     });
                     return;
                 } else {
-                    for (let i=0; i<childComments.length; ++i) {
+                    const totalPages = Math.ceil(childComments.length/limit);
+                    const pagedChildComments = await db.Comment.findAll({
+                        where: {
+                            parentIndex: comment.dataValues.index
+                        },
+                        limit: limit,
+                        offset: limit * (Number(req.query.page)-1)
+                    });
+
+                    for (let i=0; i<pagedChildComments.length; ++i) {
                         let like = false;
                         let hate = false;
 
@@ -949,7 +968,7 @@ router.get('/childComment', (req, res) => {
                             const likeOrHate = await db.LikeOrHate.findAll({
                                 where: {
                                     member_info_index: token.index,
-                                    comment_index: childComments[i].dataValues.index
+                                    comment_index: pagedChildComments[i].dataValues.index
                                 }
                             });
 
@@ -965,8 +984,8 @@ router.get('/childComment', (req, res) => {
                             }
                         }
 
-                        if (childComments[i].dataValues.isDeleted) {
-                            childComments[i].dataValues.creator = {};
+                        if (pagedChildComments[i].dataValues.isDeleted) {
+                            pagedChildComments[i].dataValues.creator = {};
                         } else {
                             await db.MemberInfo.findOne({
                                 attributes: [
@@ -974,7 +993,7 @@ router.get('/childComment', (req, res) => {
                                     'hasChild', 'childBirthYear', 'childBirthMonth', 'childBirthDay'
                                 ],
                                 where: {
-                                    index: childComments[i].dataValues.member_info_index
+                                    index: pagedChildComments[i].dataValues.member_info_index
                                 }
                             }).then((result) => {
                                 if (!result) {
@@ -983,14 +1002,14 @@ router.get('/childComment', (req, res) => {
                                     });
                                     return;
                                 } else {
-                                    childComments[i].dataValues.creator = result.dataValues;
-                                    childComments[i].dataValues.like = like;
-                                    childComments[i].dataValues.hate = hate;
+                                    pagedChildComments[i].dataValues.creator = result.dataValues;
+                                    pagedChildComments[i].dataValues.like = like;
+                                    pagedChildComments[i].dataValues.hate = hate;
                                 }
                             });
                         }
                     }
-                    res.json(childComments);
+                    res.json({childComments: pagedChildComments, totalPages: totalPages});
                     return;
                 }
             });
