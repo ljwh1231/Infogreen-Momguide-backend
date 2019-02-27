@@ -1,41 +1,42 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('HoneyTip',{
+    return sequelize.define('PrivateAlarm',{
         index: {
             type: DataTypes.BIGINT,
             allowNull: false,
             autoIncrement: true,
             primaryKey: true
         },
-        title: {
+        imageUrl: {
             type: DataTypes.STRING,
-            allowNull: false
-        },
-        subtitle: {
-            type: DataTypes.STRING,
-            allowNull: false
+            allowNull: false,
+            validate: {
+                isUrl: true
+            }
         },
         content: {
             type: DataTypes.STRING,
-            allowNull: false,
-            defaultValue: ""
+            allowNull: false
         },
-        titleImageUrl: {
+        linkUrl: {
             type: DataTypes.STRING,
-            allowNull: false,
-            validate: {
-                isUrl: true
-            }
+            allowNull: false
         },
-        contentImageUrl: {
-            type: DataTypes.STRING,
+        read: {
+            type: DataTypes.BOOLEAN,
             allowNull: false,
-            validate: {
-                isUrl: true
-            }
+            defaultValue: false
+        },
+        category: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        categoryIndex: {
+            type: DataTypes.BIGINT,
+            allowNull: false
         }
     }, {
         underscored: true,
         freezeTableName: true,
-        tableName: 'honey_tip'
+        tableName: 'private_alarm'
     });
 }

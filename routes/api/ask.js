@@ -12,12 +12,12 @@ const config = require('../../config/config');
 
 // function to get extension in filename
 function getExtension(fileName) {
-    var list = fileName.split('.');
+    const list = fileName.split('.');
     return '.' + list[list.length-1];
 }
 
 // function to decode user token
-function decodeToken(token) {
+function decodeToken(res, token) {
 
     if (!token) {
         res.status(400).json({
@@ -61,7 +61,7 @@ function decodeToken(token) {
 router.post('/requestIngredOpen', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -132,7 +132,7 @@ router.post('/requestIngredOpen', (req, res) => {
 router.delete('/cancelIngredOpen', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -192,21 +192,24 @@ router.delete('/cancelIngredOpen', (req, res) => {
 
 /*
     > 성분 공개 요청한 제품들 목록 받아오기
-    > GET /api/ask/ingredOpen
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
+    > GET /api/ask/ingredOpen?page=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.page로 page 넘버를 전달
     > erro: {
         "invalid request": 올바른 req가 전달되지 않음
+        "find error": db 상에서 정보를 찾는데에 오류가 발생함
         "unauthorized request": 권한 없는 사용자가 접근
     }
-    > [
-        결과를 배열로 전달(제품 정보 + 해당 제품을 성분 공개 요청한 사람 수도 numIngredOpen으로 추가됨)
-      ]
+    > {
+        Data: [] (제품 정보 배열, 객체 안에 해당 제품을 성분 공개 요청한 인원수도 numIngredOpen으로 포함시켜놓음)
+        totalPages: 전체 페이지 수
+      }
 */
 router.get('/ingredOpen', (req, res) => {
     let token = req.headers['authorization'];
     let finalResult = [];
+    const limit = 10;
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -214,30 +217,45 @@ router.get('/ingredOpen', (req, res) => {
             return;
         }
 
-        db.MemberToOpenRequest.findAll({
+        db.MemberToOpenRequest.findAndCountAll({
             where: {
                 memberIndex: token.index
             }
-        }).then(async (result) => {
-            for (let i=0; i<result.length; ++i) {
-                await db.LivingDB.findOne({
-                    where: {
-                        index: result[i].dataValues.productIndex
-                    }
-                }).then(async (productInfo) => {
-                    await db.MemberToOpenRequest.findAndCountAll({
-                        where: {
-                            productIndex: productInfo.dataValues.index
-                        }
-                    }).then((countInfo) => {
-                        productInfo.dataValues.numIngredOpen = countInfo.count;
-                        finalResult.push(productInfo.dataValues);
-                    });
+        }).then((result) => {
+            if (!result){
+                res.status(424).json({
+                    error: "find error"
                 });
+                return;
             }
+            const totalPages = Math.ceil(result.count/limit);
+            db.MemberToOpenRequest.findAll({
+                where: {
+                    memberIndex: token.index
+                },
+                limit: limit,
+                offset: limit * (Number(req.query.page)-1)
+            }).then(async (result) => {
+                for (let i=0; i<result.length; ++i) {
+                    await db.LivingDB.findOne({
+                        where: {
+                            index: result[i].dataValues.productIndex
+                        }
+                    }).then(async (productInfo) => {
+                        await db.MemberToOpenRequest.findAndCountAll({
+                            where: {
+                                productIndex: productInfo.dataValues.index
+                            }
+                        }).then((countInfo) => {
+                            productInfo.dataValues.numIngredOpen = countInfo.count;
+                            finalResult.push(productInfo.dataValues);
+                        });
+                    });
+                }
 
-            res.json(finalResult);
-            return;
+                res.json({Data: finalResult, totalPages: totalPages});
+                return;
+            });
         });
 
     }).catch((error) => {
@@ -264,7 +282,7 @@ router.get('/ingredOpen', (req, res) => {
 router.get('/checkIngredOpen', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -370,7 +388,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
     moment.tz.setDefault("Asia/Seoul");
     reqObj = {};
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -386,7 +404,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
         }
 
         const currentDate = moment().format('MMMM Do YYYY');
-        
+
         db.IngredientAnalysis.findAll({
             limit: 1,
             where: {
@@ -408,7 +426,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
                 db.IngredientAnalysis.findAll({
                     limit: 1,
                     where: {},
-                    order: [[ 'created_at', 'DESC' ]]
+                    order: [[ 'index', 'DESC' ]]
                 }).then((result) => {
                     if (result.length === 0) {
                         nextIndex = 1;
@@ -509,7 +527,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
 
     reqObj = {};
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.query.index) {
             res.status(400).json({
                 error: "invalid request"
@@ -673,7 +691,7 @@ router.delete('/cancelIngredAnal', (req, res) => {
         Key: null
     };
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -784,21 +802,23 @@ router.delete('/cancelIngredAnal', (req, res) => {
 
 /*
     > 성분 분석 요청 목록 불러오기
-    > GET /api/ask/ingredAnal
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
-    > []: 빈 배열. 검색 결과 없음.
-      error: {
+    > GET /api/ask/ingredAnal?page=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.page로 page 넘버 전달
+    > error: {
           "invalid request": 올바른 req가 전달되지 않음
+          "find error": db에서 제품 정보를 찾는데에 오류 발생
           "unauthorized request": 권한 없는 사용자가 접근
       }
-    > [
-        결과를 배열로 전달
-      ]
+    > {
+        Data: [] (제품 정보 배열)
+        totalPages: 전체 페이지 수
+      }
 */
 router.get('/ingredAnal', (req, res) => {
     let token = req.headers['authorization'];
+    const limit = 6;
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -806,13 +826,36 @@ router.get('/ingredAnal', (req, res) => {
             return;
         }
 
-        db.IngredientAnalysis.findAll({
+        db.IngredientAnalysis.findAndCountAll({
             where: {
                 memberIndex: token.index
             }
         }).then((result) => {
-            res.json(result);
-            return;
+            if (!result) {
+                res.status(424).json({
+                    error: "find error"
+                });
+                return;
+            } else {
+                const totalPages = Math.ceil(result.count/limit);
+                db.IngredientAnalysis.findAll({
+                    where: {
+                        memberIndex: token.index
+                    },
+                    limit: limit,
+                    offset: limit * (Number(req.query.page)-1)
+                }).then((result) => {
+                    if (!result) {
+                        res.status(424).json({
+                            error: "find error"
+                        });
+                        return;
+                    } else {
+                        res.json({Data: result, totalPages: totalPages});
+                        return;
+                    }
+                });
+            }
         });
 
     }).catch((error) => {
@@ -856,7 +899,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
         Key: null
     };
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
@@ -1017,7 +1060,7 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
 
     queObj = {};
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1038,7 +1081,7 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
         db.OneToOneQuestion.findAll({
             limit: 1,
             where: {},
-            order: [[ 'created_at', 'DESC' ]]
+            order: [[ 'index', 'DESC' ]]
         }).then((result) => {
             if (result.length === 0) {
                 nextIndex = 1;
@@ -1137,7 +1180,7 @@ router.put('/editOneToOne', formidable(), (req, res) => {
 
     queObj = {};
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.query.index) {
             res.status(400).json({
                 error: "invalid request"
@@ -1299,7 +1342,7 @@ router.delete('/cancelOneToOne', (req, res) => {
         Key: null
     };
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1410,21 +1453,23 @@ router.delete('/cancelOneToOne', (req, res) => {
 
 /*
     > 1:1 문의 불러오기
-    > GET /api/ask/oneToOne
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것.
-    > []: 빈 배열. 검색 결과 없음.
-      error: {
+    > GET /api/ask/oneToOne?page=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.page로 page 넘버를 전달
+    > error: {
           "invalid request": 올바른 req가 전달되지 않음
+          "find error": db에서 정보 찾는데에 오류 발생
           "unauthorized request": 권한 없는 사용자가 접근
       }
-    > [
-        결과를 배열로 전달
-      ]
+    > {
+        Data: [] (제품 정보 배열, 객체 안에 해당 제품을 성분 공개 요청한 인원수도 numIngredOpen으로 포함시켜놓음)
+        totalPages: 전체 페이지 수
+      }
 */
 router.get('/oneToOne', (req, res) => {
     let token = req.headers['authorization'];
+    const limit = 6;
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1432,13 +1477,37 @@ router.get('/oneToOne', (req, res) => {
             return;
         }
 
-        db.OneToOneQuestion.findAll({
+        db.OneToOneQuestion.findAndCountAll({
             where: {
                 memberIndex: token.index
             }
         }).then((result) => {
-            res.json(result);
-            return;
+            if (!result) {
+                res.status(424).json({
+                    error: "find error"
+                });
+                return;
+            } else {
+                const totalPages = Math.ceil(result.count/limit);
+
+                db.OneToOneQuestion.findAll({
+                    where: {
+                        memberIndex: token.index
+                    },
+                    limit: limit,
+                    offset: limit * (Number(req.query.page)-1)
+                }).then((result) => {
+                    if (!result) {
+                        res.status(424).json({
+                            error: "find error"
+                        });
+                        return;
+                    } else {
+                        res.json({Data: result, totalPages: totalPages});
+                        return;
+                    }
+                });
+            }
         });
 
     }).catch((error) => {
@@ -1482,7 +1551,7 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
         Key: null
     };
 
-    decodeToken(token).then((token) => {
+    decodeToken(res, token).then((token) => {
         
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({

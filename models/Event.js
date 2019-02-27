@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('HoneyTip',{
+    return sequelize.define('Event',{
         index: {
             type: DataTypes.BIGINT,
             allowNull: false,
@@ -32,10 +32,17 @@ module.exports = (sequelize, DataTypes) => {
             validate: {
                 isUrl: true
             }
+        },
+        expirationDate: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            validate: {
+                isDate: true
+            }
         }
     }, {
         underscored: true,
         freezeTableName: true,
-        tableName: 'honey_tip'
+        tableName: 'event'
     });
 }

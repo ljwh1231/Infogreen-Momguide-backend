@@ -1,32 +1,23 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('HoneyTip',{
+    return sequelize.define('PublicAlarm',{
         index: {
             type: DataTypes.BIGINT,
             allowNull: false,
             autoIncrement: true,
             primaryKey: true
         },
-        title: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        subtitle: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        content: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            defaultValue: ""
-        },
-        titleImageUrl: {
+        imageUrl: {
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
                 isUrl: true
             }
         },
-        contentImageUrl: {
+        content: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        linkUrl: {
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
@@ -36,6 +27,6 @@ module.exports = (sequelize, DataTypes) => {
     }, {
         underscored: true,
         freezeTableName: true,
-        tableName: 'honey_tip'
+        tableName: 'public_alarm'
     });
 }
