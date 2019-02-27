@@ -987,7 +987,7 @@ router.get('/post', (req, res) => {
                             });
                         }
                     }
-                    res.json(comments);
+                    res.json({event: event, comments: comments});
                     return;
                 }
             });
