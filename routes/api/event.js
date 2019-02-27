@@ -847,8 +847,9 @@ router.post('/childComment', (req, res) => {
 
 /*
     > 이벤트 포스트 하나의 본문과 그 딸린 댓글들을 불러오는 api
-    > GET /api/event/post?index=1&page=1
+    > GET /api/event/post?index=1&order=latest&page=1
     > req.query.index 해당 팁의 index를 전달, req.query.page에 해당 페이지 넘버를 전달
+      req.query.order로 정렬 순서 전달.(latest: 최신순, recommend: 추천순)
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "no such post": 존재하지 않는 포스트
@@ -865,7 +866,14 @@ router.post('/childComment', (req, res) => {
 router.get('/post', (req, res) => {
     const limit = 10;
     
-    if (!req.query.index || !req.query.page) {
+    if (!req.query.index || !req.query.page || !req.query.order) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    if (req.query.order !== 'latest' && req.query.order !== 'recommend') {
         res.status(400).json({
             error: "invalid request"
         });
@@ -892,12 +900,23 @@ router.get('/post', (req, res) => {
                 } else {
                     const totalNum = comments.length;
                     const totalPages = Math.ceil(comments.length/limit);
-                    const pagedComments = await event.getComments({
-                        limit: limit,
-                        offset: limit * (Number(req.query.page)-1)
-                    });
+                    let sortedComments;
 
-                    for (let i=0; i<pagedComments.length; ++i) {
+                    if (req.query.order === 'latest') {
+                        sortedComments = await event.getComments({
+                            limit: limit,
+                            offset: limit * (Number(req.query.page)-1),
+                            order: [['created_at', 'DESC']]
+                        });
+                    } else if (req.query.order === 'recommend') {
+                        sortedComments = await event.getComments({
+                            limit: limit,
+                            offset: limit * (Number(req.query.page)-1),
+                            order: [['likeNum', 'DESC']]
+                        });
+                    }
+
+                    for (let i=0; i<sortedComments.length; ++i) {
                         let like = false;
                         let hate = false;
 
@@ -919,7 +938,7 @@ router.get('/post', (req, res) => {
                             const likeOrHate = await db.LikeOrHate.findAll({
                                 where: {
                                     member_info_index: token.index,
-                                    comment_index: pagedComments[i].dataValues.index
+                                    comment_index: sortedComments[i].dataValues.index
                                 }
                             });
 
@@ -935,8 +954,8 @@ router.get('/post', (req, res) => {
                             }
                         }
 
-                        if (pagedComments[i].dataValues.isDeleted) {
-                            pagedComments[i].dataValues.creator = {};
+                        if (sortedComments[i].dataValues.isDeleted) {
+                            sortedComments[i].dataValues.creator = {};
                         } else {
                             await db.MemberInfo.findOne({
                                 attributes: [
@@ -944,7 +963,7 @@ router.get('/post', (req, res) => {
                                     'hasChild', 'childBirthYear', 'childBirthMonth', 'childBirthDay'
                                 ],
                                 where: {
-                                    index: pagedComments[i].dataValues.member_info_index
+                                    index: sortedComments[i].dataValues.member_info_index
                                 }
                             }).then((result) => {
                                 if (!result) {
@@ -953,14 +972,14 @@ router.get('/post', (req, res) => {
                                     });
                                     return;
                                 } else {
-                                    pagedComments[i].dataValues.creator = result.dataValues;
-                                    pagedComments[i].dataValues.like = like;
-                                    pagedComments[i].dataValues.hate = hate;
+                                    sortedComments[i].dataValues.creator = result.dataValues;
+                                    sortedComments[i].dataValues.like = like;
+                                    sortedComments[i].dataValues.hate = hate;
                                 }
                             });
                         }
                     }
-                    res.json({event: event, comments: pagedComments, totalPages: totalPages, totalNum: totalNum});
+                    res.json({event: event, comments: sortedComments, totalPages: totalPages, totalNum: totalNum});
                     return;
                 }
             });
