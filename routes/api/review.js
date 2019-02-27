@@ -81,8 +81,6 @@ router.get('/member/list', async (req, res) => {
         for(const i in reviews) {
             const review = reviews[i];
             const additionalReviews = await review.getProductAdditionalReviews();
-            console.log(additionalReviews);
-            console.log("00000000000000000000000")
             result.push({
                 review: review,
                 recentDate: (additionalReviews.length ? additionalReviews[additionalReviews.length - 1].date : null)
@@ -156,34 +154,42 @@ router.get('/product/list', async (req, res) => {
         const totalPages = Math.ceil(reviews.length / pageSize);
         reviews = reviews.slice((page-1) * pageSize, page * pageSize);
 
-
         const result = {
             nextPageExist: nextPageExist,
             totalPages: totalPages,
             reviews: []
         };
+
         for(const i in reviews) {
             const review = reviews[i];
 
-            const images = await db.ProductReviewImage.findAll({
+            const imagesPromise = db.ProductReviewImage.findAll({
                 where: {
                     'product_review_index': review.index
                 }
             });
 
-            const additionalReviews = await db.ProductAdditionalReview.findAll({
+            const additionalReviewsPromise = db.ProductAdditionalReview.findAll({
                 where: {
                     'product_review_index': review.index
                 }
             });
+
+            const likePromise = db.sequelize.query(
+                `SELECT * FROM like_or_hate WHERE member_info_index=${member.index} AND product_review_index=${review.index};`,
+                { type: db.sequelize.QueryTypes.SELECT });
 
             const reviewOwner = (await db.sequelize.query(`SELECT * FROM member_info WHERE \`index\`=${review.member_info_index}`))[0][0];
+            const like = await likePromise;
+            const images = await imagesPromise;
+            const additionalReviews = await additionalReviewsPromise;
 
             result.reviews.push({
                 reviewOwner: reviewOwner,
                 review: review,
                 images: images,
-                additionalReviews: additionalReviews
+                additionalReviews: additionalReviews,
+                like: like.length > 0
             });
         }
         res.json(result);
@@ -196,7 +202,7 @@ router.get('/product/list', async (req, res) => {
 });
 
 /*
- * 상품 리뷰 목록 불러오기 : GET /api/review/product/list/count?category=living&id=1
+ * 상품 리뷰 목록 개수 불러오기 : GET /api/review/product/list/count?category=living&id=1
  * AUTHORIZATION NEEDED
  */
 
@@ -392,9 +398,9 @@ router.get('/product', async (req, res) => {
 
         let product;
         if (review.living_index) {
-            product = await db.sequelize.query(`SELECT * FROM living WHERE \`index\`=${review.index}`);
+            product = await db.sequelize.query(`SELECT * FROM living WHERE index=${review.index}`);
         } else {
-            product = await db.sequelize.query(`SELECT * FROM cosmetic WHERE \`index\`=${review.index}`);
+            product = await db.sequelize.query(`SELECT * FROM cosmetic WHERE index=${review.index}`);
         }
         res.json(product[0][0]);
     } catch(e) {
@@ -537,6 +543,157 @@ router.post('/', formidable({multiples: true}), async (req, res) => {
         console.log(e);
         res.status(500).json({
             error: "Internal Server Error"
+        });
+    }
+});
+
+/*
+ * 리뷰 좋아요 : POST /api/review/like
+ * AUTHORIZATION NEEDED
+ * BODY SAMPLE: {
+ *  "reviewId": 1,
+ * }
+ */
+
+router.post('/like', async (req, res) => {
+    if(!req.body.reviewId || isNaN(Number(req.body.reviewId))) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    try {
+        let token = req.headers['authorization'];
+        token = await util.decodeToken(token, res);
+
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const memberPromise = db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email,
+                nickName: token.nickName
+            }
+        });
+
+        const reviewPromise = db.ProductReview.findOne({
+            where: {
+                index: Number(req.body.reviewId)
+            }
+        });
+
+        const member = await memberPromise;
+        const review = await reviewPromise;
+
+        if(!member || !review) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const like = await db.sequelize.query(
+            `SELECT * FROM like_or_hate WHERE member_info_index=${member.index} AND product_review_index=${req.body.reviewId};`,
+            { type: db.sequelize.QueryTypes.SELECT });
+
+        if(like.length) {
+            res.json({
+                like: false
+            })
+        } else {
+            const like = await db.LikeOrHate.create({
+                index: Number(req.body.reviewId),
+                assessment: true
+            });
+            member.addLikeOrHate(like);
+            review.addLikeOrHate(like);
+            res.json({
+                like: true
+            });
+        }
+    } catch(e) {
+        console.log(e);
+        res.status(400).json({
+            error: "invalid request"
+        });
+    }
+});
+
+/*
+ * 리뷰 신고하기 : POST /api/review/report
+ * AUTHORIZATION NEEDED
+ * BODY SAMPLE {
+ *  "reviewId": 1
+ *  "reason": "abusing"
+ *  "reasonSpec": "" (OPTIONAL)
+ * }
+ */
+
+router.post('/report', async (req, res) => {
+    if(!req.body.reviewId || isNaN(Number(req.body.reviewId)) || !req.body.reason || typeof req.body.reason !== 'string') {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    try {
+        let token = req.headers['authorization'];
+        token = await util.decodeToken(token, res);
+
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const memberPromise = db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email,
+                nickName: token.nickName
+            }
+        });
+
+        const reviewPromise = db.ProductReview.findOne({
+            where: {
+                index: Number(req.body.reviewId)
+            }
+        });
+
+        const member = await memberPromise;
+        const review = await reviewPromise;
+
+        if(!member || !review) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const reportQuery = {
+            reason: req.body.reason
+        };
+
+        if(req.body.reasonSpec && typeof req.body.reasonSpec === 'string')
+            reportQuery['reasonSpec'] = req.body.reasonSpec;
+
+        const report = await db.Report.create(reportQuery);
+        member.addReport(report);
+        review.addReport(report);
+
+        res.json(report);
+    } catch(e) {
+        console.log(e);
+        res.status(400).json({
+            error: "invalid request"
         });
     }
 });
@@ -727,6 +884,80 @@ router.delete('/', async (req, res) => {
         console.log(e);
         res.status(500).json({
             error: "Internal Server Error"
+        });
+    }
+});
+
+/*
+ * 리뷰 좋아요 취소 : DELETE /api/review/like
+ * AUTHORIZATION NEEDED
+ * BODY SAMPLE: {
+ *  "reviewId": 1
+ * }
+ */
+
+router.delete('/like', async (req, res) => {
+    if(!req.body.reviewId || isNaN(Number(req.body.reviewId))) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
+    try {
+        let token = req.headers['authorization'];
+        token = await util.decodeToken(token, res);
+
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const member = await db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email,
+                nickName: token.nickName
+            }
+        });
+
+        const review = await db.ProductReview.findOne({
+            where: {
+                index: Number(req.body.reviewId)
+            }
+        });
+
+        if(!member || !review) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        const like = await db.sequelize.query(
+            `SELECT * FROM like_or_hate WHERE member_info_index=${member.index} AND product_review_index=${req.body.reviewId};`,
+            { type: db.sequelize.QueryTypes.SELECT });
+
+        if(like.length) {
+            await db.LikeOrHate.destroy({
+                where: {
+                    index: like[0].index
+                }
+            });
+            res.json({
+                success: true
+            });
+        } else {
+            res.status(400).json({
+                error: 'already like canceled'
+            });
+        }
+    } catch(e) {
+        console.log(e);
+        res.status(400).json({
+            error: "invalid request"
         });
     }
 });
