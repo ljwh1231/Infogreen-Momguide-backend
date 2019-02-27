@@ -405,7 +405,7 @@ router.get('/postList', (req, res) => {
             where: {},
             limit: limit,
             offset: limit * (Number(req.query.page)-1),
-            attributes: ['title', 'subtitle', 'titleImageUrl', 'created_at']
+            attributes: ['index', 'title', 'subtitle', 'titleImageUrl', 'created_at']
         }).then((result) => {
             if (!result) {
                 res.status(424).json({
