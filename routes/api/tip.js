@@ -671,6 +671,7 @@ router.put('/comment', (req, res) => {
     > 유저가 팁 댓글에 대댓글을 작성하는 api
     > POST /api/tip/childComment
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.content로 댓글 내용, req.body.commentIndex로 해당 댓글의 index를 전달
+      req.query.page에 해당 페이지 넘버를 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "no such comment": 존재하지 않는 댓글
@@ -767,17 +768,19 @@ router.post('/childComment', (req, res) => {
 /*
     > 팁 포스트 하나의 본문과 그 딸린 댓글들을 불러오는 api
     > GET /api/tip/post?index=1?page=1
-    > req.query.index 해당 팁의 index를 전달
+    > req.query.index 해당 팁의 index를 전달, req.query.page에 해당 페이지 넘버를 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "no such post": 존재하지 않는 포스트
           "find error": db에 있는 정보를 가져오는 데에 문제 발생
           "unauthorized request": 권한 없는 접근
       }
-    > [
-        댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
-        like, hate는 로그인한 유저가 해당 댓글에 좋아요/싫어요를 했는지의 여부를 전달. 만약 둘 다 하지 않았거나 로그인하지 않은 상태라면 둘 다 false를 전달. 
-      ]
+    > {
+        tip: 꿀팁 본문,
+        comments: 댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
+            like, hate는 로그인한 유저가 해당 댓글에 좋아요/싫어요를 했는지의 여부를 전달. 만약 둘 다 하지 않았거나 로그인하지 않은 상태라면 둘 다 false를 전달.
+        totalPages: 전체 페이지
+      }
 */
 router.get('/post', (req, res) => {
     const limit = 10;
@@ -895,10 +898,11 @@ router.get('/post', (req, res) => {
           "find error": db에 있는 정보를 가져오는 데에 문제 발생
           "unauthorized request": 권한 없는 접근
       }
-    > [
-        댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
-        like, hate는 로그인한 유저가 해당 댓글에 좋아요/싫어요를 했는지의 여부를 전달. 만약 둘 다 하지 않았거나 로그인하지 않은 상태라면 둘 다 false를 전달. 
-      ]
+    > {
+        childComments: 대댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
+            like, hate는 로그인한 유저가 해당 댓글에 좋아요/싫어요를 했는지의 여부를 전달. 만약 둘 다 하지 않았거나 로그인하지 않은 상태라면 둘 다 false를 전달.
+        totalPages: 전체 페이지
+      }
 */
 router.get('/childComment', (req, res) => {
     const limit = 10;
