@@ -225,14 +225,7 @@ router.post('/register', formidable(), (req, res) => {
                                         infoObj.photoUrl = config.s3Url + params.Key;
                                         db.MemberInfo.create(
                                             infoObj
-                                        ).catch(Sequelize.ValidationError, (err) => {
-                                            if (err) {
-                                                res.json({
-                                                    error: "Validation error"
-                                                });
-                                                return;
-                                            }
-                                        }).then((result) => {
+                                        ).then((result) => {
                                             if (!result) {
                                                 res.status(424).json({
                                                     error: "member creation failed"
