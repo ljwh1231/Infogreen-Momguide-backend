@@ -1007,7 +1007,7 @@ router.get('/childComment', (req, res) => {
                 error: "no such comment"
             });
             return;
-        } else if (comment.dataValues.event_index !== null || comment.dataValues.winner_index !== null || comment.dataValues.parentIndex === null) {
+        } else if (comment.dataValues.event_index !== null || comment.dataValues.winner_index !== null || comment.dataValues.parentIndex !== null) {
             res.status(424).json({
                 error: "not proper comment"
             });
