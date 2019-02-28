@@ -83,8 +83,8 @@ router.get('/member/list', async (req, res) => {
         const pageSize = 6;
 
         let reviews = await member.getProductReviews();
-        const totalLength = reviews.length;
         reviews = reviews.filter((review) => (req.query.category === 'living' ? review.dataValues.living_index !== null : review.dataValues.cosmetic_index !== null));
+        const totalLength = reviews.length;
         reviews = (reviews.slice((page-1) * pageSize, page * pageSize));
         const result = [];
 
