@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
-const jwt = require('jsonwebtoken');
 const formidable = require('express-formidable');
 
 const db = require("../../models/index");

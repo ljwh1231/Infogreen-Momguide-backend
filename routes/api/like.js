@@ -1,6 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 
 const db = require("../../models/index");
 const util = require("./util");
@@ -16,6 +15,7 @@ const util = require("./util");
           "already deleted": 이미 삭제된 댓글
           "already liked": 이미 좋아요한 댓글
           "unauthorized request": 권한 없는 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > {
         db에 삽입된 결과를 전달
@@ -84,6 +84,13 @@ router.post('/commentLike', (req, res) => {
 
                                 const like = await db.LikeOrHate.create({
                                     assessment: true
+                                }).catch(Sequelize.ValidationError, (err) => {
+                                    if (err) {
+                                        res.json({
+                                            error: 'validation error'
+                                        });
+                                        return;
+                                    }
                                 });
 
                                 comment.addLikeOrHate(like);
@@ -229,6 +236,7 @@ router.delete('/commentLike', (req, res) => {
           "already deleted": 이미 삭제된 댓글
           "already hated": 이미 싫어요한 댓글
           "unauthorized request": 권한 없는 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > {
         db에 삽입된 결과를 전달
@@ -297,6 +305,13 @@ router.post('/commentHate', (req, res) => {
 
                                 const hate = await db.LikeOrHate.create({
                                     assessment: false
+                                }).catch(Sequelize.ValidationError, (err) => {
+                                    if (err) {
+                                        res.json({
+                                            error: 'validation error'
+                                        });
+                                        return;
+                                    }
                                 });
 
                                 comment.addLikeOrHate(hate);
@@ -441,6 +456,7 @@ router.delete('/commentHate', (req, res) => {
           "no such event": 존재하지 않는 이벤트
           "already liked": 이미 좋아요한 이벤트
           "unauthorized request": 권한 없는 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > {
         db에 삽입된 결과를 전달
@@ -501,6 +517,13 @@ router.post('/eventLike', (req, res) => {
                             } else {
                                 const like = await db.LikeOrHate.create({
                                     assessment: true
+                                }).catch(Sequelize.ValidationError, (err) => {
+                                    if (err) {
+                                        res.json({
+                                            error: 'validation error'
+                                        });
+                                        return;
+                                    }
                                 });
 
                                 event.addLikeOrHate(like);

@@ -20,6 +20,7 @@ const config = require('../../config/config');
           "s3 store failed": s3 버켓 안에 이미지 저장 실패
           "alarm add failed": 알림이 저장되지 않음
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > [
         db안에 저장된 결과가 반환
@@ -103,7 +104,16 @@ router.post('/publicAlarm', formidable(), (req, res) => {
                     });
                     return;
                 } else {
-                    db.PublicAlarm.create(addObj).then((alarm) => {
+                    db.PublicAlarm.create(
+                        addObj
+                    ).catch(Sequelize.ValidationError, (err) => {
+                        if (err) {
+                            res.json({
+                                error: 'validation error'
+                            });
+                            return;
+                        }
+                    }).then((alarm) => {
                         if (!alarm) {
                             res.status(424).json({
                                 error: "alarm add failed"
@@ -147,6 +157,7 @@ router.post('/publicAlarm', formidable(), (req, res) => {
           "s3 store failed": s3 버켓 안에 이미지 저장 실패
           "alarm update failed": 알림이 수정되지 않음
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success : {
         true: 성공적으로 수정 완료
@@ -246,7 +257,14 @@ router.put('/publicAlarm', formidable(), (req, res) => {
                                             index: Number(req.query.index)
                                         }
                                     }
-                                ).then((result) => {
+                                ).catch(Sequelize.ValidationError, (err) => {
+                                    if (err) {
+                                        res.json({
+                                            error: 'validation error'
+                                        });
+                                        return;
+                                    }
+                                }).then((result) => {
                                     if (!result) {
                                         res.status(424).json({
                                             error: "alarm update failed"
@@ -433,6 +451,7 @@ router.get('/publicAlarm', (req, res) => {
           "no such member": 존재하지 않는 회원
           "update failed": 업데이트 실패
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 수정 완료
@@ -473,7 +492,14 @@ router.put('/publicRead', (req, res) => {
                                 public_alarm_index: publicAlarms[i].dataValues.index
                             }
                         }
-                    ).then((result) => {
+                    ).catch(Sequelize.ValidationError, (err) => {
+                        if (err) {
+                            res.json({
+                                error: 'validation error'
+                            });
+                            return;
+                        }
+                    }).then((result) => {
                         if (!result) {
                             res.status(424).json({
                                 error: "update failed"
@@ -565,6 +591,7 @@ router.get('/privateAlarm', (req, res) => {
           "no such member": 존재하지 않는 회원
           "update failed": 업데이트 실패
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 수정 완료
@@ -605,7 +632,14 @@ router.put('/privateRead', (req, res) => {
                                 index: privateAlarms[i].dataValues.index
                             }
                         }
-                    ).then((result) => {
+                    ).catch(Sequelize.ValidationError, (err) => {
+                        if (err) {
+                            res.json({
+                                error: 'validation error'
+                            });
+                            return;
+                        }
+                    }).then((result) => {
                         if (!result) {
                             res.status(424).json({
                                 error: "update failed"

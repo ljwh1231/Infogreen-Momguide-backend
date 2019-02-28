@@ -7,6 +7,7 @@ const bcrypt = require('bcrypt-nodejs');
 const jwt = require('jsonwebtoken');
 const formidable = require('express-formidable');
 const sgMail = require('@sendgrid/mail');
+const Sequelize = require('sequelize');
 
 const db = require("../../models/index");
 const config = require('../../config/config');
@@ -57,7 +58,7 @@ async function findProduct(prevResult) {
           "s3 store failed": s3 버켓 안에 이미지 저장 실패
           "member creation failed": db안에 회원정보 생성 실패
           "mailchimp registraion failed": 메일 침프에 정보 등록 실패
-          "Validation error": db에 넣으려는 value가 조건에 맞지 않은 value
+          "Validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > result: {
         db안에 생성된 회원정보가 전달
@@ -192,7 +193,14 @@ router.post('/register', formidable(), (req, res) => {
                                         infoObj.photoUrl = config.s3Url + params.Key;
                                         db.MemberInfo.create(
                                             infoObj
-                                        ).done((result) => {
+                                        ).catch(Sequelize.ValidationError, (err) => {
+                                            if (err) {
+                                                res.status(400).json({
+                                                    error: "validation error"
+                                                });
+                                                return;
+                                            }
+                                        }).then((result) => {
                                             if (!result) {
                                                 res.status(424).json({
                                                     error: "member creation failed"
@@ -562,6 +570,7 @@ router.get('/info', (req, res) => {
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "product add failed": db에 해당 제품을 추가하는데에 문제 발생
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 등록
@@ -582,7 +591,14 @@ router.post('/addHomeCosmetic', (req, res) => {
             memberIndex: token.index,
             productIndex: req.body.productIndex,
             isCosmetic: true
-        }).done((result) => {
+        }).catch(Sequelize.ValidationError, (err) => {
+            if (err) {
+                res.json({
+                    error: 'validation error'
+                });
+                return;
+            }
+        }).then((result) => {
             if (!result) {
                 res.status(424).json({
                     error: "product add failed"
@@ -613,6 +629,7 @@ router.post('/addHomeCosmetic', (req, res) => {
           "invalid request": 올바른 req가 전달되지 않음
           "product add failed": db에 해당 제품을 추가하는데에 문제 발생
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 등록
@@ -633,7 +650,14 @@ router.post('/addHomeLiving', (req, res) => {
             memberIndex: token.index,
             productIndex: req.body.productIndex,
             isCosmetic: false
-        }).done((result) => {
+        }).catch(Sequelize.ValidationError, (err) => {
+            if (err) {
+                res.json({
+                    error: 'validation error'
+                });
+                return;
+            }
+        }).then((result) => {
             if (!result) {
                 res.status(424).json({
                     error: "product add failed"
@@ -773,6 +797,7 @@ router.delete('/cancelHomeLiving', (req, res) => {
           "invalid request": 올바른 req가 전달되지 않음
           "product add failed": db에 해당 제품을 추가하는데에 문제 발생
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 등록
@@ -793,7 +818,14 @@ router.post('/addLikeCosmetic', (req, res) => {
             memberIndex: token.index,
             productIndex: req.body.productIndex,
             isCosmetic: true
-        }).done((result) => {
+        }).catch(Sequelize.ValidationError, (err) => {
+            if (err) {
+                res.json({
+                    error: 'validation error'
+                });
+                return;
+            }
+        }).then((result) => {
             if (!result) {
                 res.status(424).json({
                     error: "product add failed"
@@ -824,6 +856,7 @@ router.post('/addLikeCosmetic', (req, res) => {
           "invalid request": 올바른 req가 전달되지 않음
           "product add failed": db에 해당 제품을 추가하는데에 문제 발생
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 등록
@@ -844,7 +877,14 @@ router.post('/addLikeLiving', (req, res) => {
             memberIndex: token.index,
             productIndex: req.body.productIndex,
             isCosmetic: false
-        }).done((result) => {
+        }).catch(Sequelize.ValidationError, (err) => {
+            if (err) {
+                res.json({
+                    error: 'validation error'
+                });
+                return;
+            }
+        }).then((result) => {
             if (!result) {
                 res.status(424).json({
                     error: "product add failed"
@@ -1345,6 +1385,7 @@ router.post('/requestPassword', (req, res) => {
         "hash generation failed": 해쉬 생성 실패
         "update failed": db에 있는 정보 변경 실패
         "unauthorized request": 권한 없는 사용자가 접근
+        "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 변경
@@ -1382,6 +1423,13 @@ router.put('/editProfile/resetPassword', (req, res) => {
                         {
                             where: {
                                 index: token.index
+                            }
+                        }).catch(Sequelize.ValidationError, (err) => {
+                            if (err) {
+                                res.json({
+                                    error: 'validation error'
+                                });
+                                return;
                             }
                         }).then((result) => {
                             if (!result) {
@@ -1424,6 +1472,7 @@ router.put('/editProfile/resetPassword', (req, res) => {
           "s3 store failed": s3 버켓에 이미지 저장 실패
           "update failed": db 안에 있는 회원정보 변경 실패
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > token: {
         token (token value를 전달)
@@ -1554,7 +1603,14 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                                 index: token.index
                             }
                         }
-                    ).then((result) => {
+                    ).catch(Sequelize.ValidationError, (err) => {
+                        if (err) {
+                            res.json({
+                                error: 'validation error'
+                            });
+                            return;
+                        }
+                    }).then((result) => {
                         if (!result) {
                             res.status(424).json({
                                 error: "update failed"
@@ -1604,7 +1660,14 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                                                 index: token.index
                                             }
                                         }
-                                    ).then((result) => {
+                                    ).catch(Sequelize.ValidationError, (err) => {
+                                        if (err) {
+                                            res.json({
+                                                error: 'validation error'
+                                            });
+                                            return;
+                                        }
+                                    }).then((result) => {
                                         if (!result) {
                                             res.status(424).json({
                                                 error: "update failed"

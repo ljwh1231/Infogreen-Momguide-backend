@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
-const jwt = require('jsonwebtoken');
 const formidable = require('express-formidable');
 const moment = require('moment');
 require('moment-timezone');
@@ -77,6 +76,7 @@ async function deleteImage(res, folderName, fileName, fileUrl) {
           "invalied file(image only)": 이미지가 아닌 파일이 넘어옴
           "s3 store failed": s3 버켓에 이미지 저장 실패
           "post add failed": 작성 실패
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > result: {
         db안에 생성된 포스트 정보 전달
@@ -143,7 +143,14 @@ router.post('/post', formidable(), (req, res) => {
                     
                     db.Event.create(
                         postObj
-                    ).then((result) => {
+                    ).catch(Sequelize.ValidationError, (err) => {
+                        if (err) {
+                            res.json({
+                                error: 'validation error'
+                            });
+                            return;
+                        }
+                    }).then((result) => {
                         if (!result) {
                             res.status(424).json({
                                 error: "post add failed"
@@ -180,6 +187,7 @@ router.post('/post', formidable(), (req, res) => {
           "s3 delete failed": s3 버켓 안의 이미지 삭제 실해
           "s3 store failed": s3 버켓에 이미지 저장 실패
           "post update failed": 수정 실패
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 변경
@@ -252,7 +260,14 @@ router.put('/post', formidable(), (req, res) => {
                                             index: result.dataValues.index
                                         }
                                     }
-                                ).then((result) => {
+                                ).catch(Sequelize.ValidationError, (err) => {
+                                    if (err) {
+                                        res.json({
+                                            error: 'validation error'
+                                        });
+                                        return;
+                                    }
+                                }).then((result) => {
                                     if (!result) {
                                         res.status(424).json({
                                             error: "post update failed"
@@ -488,6 +503,7 @@ router.get('/postList', (req, res) => {
           "no such post": 존재하지 않는 포스트
           "no such member": 존재하지 않는 회원
           "unauthorized request": 권한 없는 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > {
         db에 삽입된 결과를 전달
@@ -536,6 +552,13 @@ router.post('/comment', (req, res) => {
                         
                         const comment = await db.Comment.create({
                             content: req.body.content,
+                        }).catch(Sequelize.ValidationError, (err) => {
+                            if (err) {
+                                res.json({
+                                    error: 'validation error'
+                                });
+                                return;
+                            }
                         });
 
                         event.addComment(comment);
@@ -564,6 +587,7 @@ router.post('/comment', (req, res) => {
           "already deleted": 이미 삭제된 댓글
           "comment delete failed": 댓글 삭제 실패
           "unauthorized request": 권한 없는 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 댓글을 삭제
@@ -612,7 +636,14 @@ router.delete('/comment', (req, res) => {
                             event_index: req.body.eventIndex
                         }
                     }
-                ).then((result) => {
+                ).catch(Sequelize.ValidationError, (err) => {
+                    if (err) {
+                        res.json({
+                            error: 'validation error'
+                        });
+                        return;
+                    }
+                }).then((result) => {
                     if (!result) {
                         res.status(424).json({
                             error: "comment delete failed"
@@ -645,6 +676,7 @@ router.delete('/comment', (req, res) => {
           "already deleted": 이미 삭제된 댓글
           "comment edit failed": 댓글 수정 실패
           "unauthorized request": 권한 없는 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 댓글을 수정
@@ -692,7 +724,14 @@ router.put('/comment', (req, res) => {
                             event_index: req.body.eventIndex
                         }
                     }
-                ).then((result) => {
+                ).catch(Sequelize.ValidationError, (err) => {
+                    if (err) {
+                        res.json({
+                            error: 'validation error'
+                        });
+                        return;
+                    }
+                }).then((result) => {
                     if (!result) {
                         res.status(424).json({
                             error: "comment edit failed"
@@ -726,6 +765,7 @@ router.put('/comment', (req, res) => {
           "no such post": 존재하지 않는 포스트
           "no such member": 존재하지 않는 회원
           "unauthorized request": 권한 없는 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > {
         db에 삽입된 결과를 전달
@@ -792,6 +832,13 @@ router.post('/childComment', (req, res) => {
                                 const childComment = await db.Comment.create({
                                     content: req.body.content,
                                     parentIndex: parentIndex
+                                }).catch(Sequelize.ValidationError, (err) => {
+                                    if (err) {
+                                        res.json({
+                                            error: 'validation error'
+                                        });
+                                        return;
+                                    }
                                 });
                             
                                 event.addComment(childComment);

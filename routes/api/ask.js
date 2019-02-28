@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
-const jwt = require('jsonwebtoken');
 const formidable = require('express-formidable');
 const moment = require('moment');
 require('moment-timezone');
@@ -21,6 +20,7 @@ const util = require('./util');
           "already open": 이미 성분 공개된 제품
           "product add failed": db에 해당 제품 등록 실패
           "unauthrized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 등록
@@ -57,7 +57,14 @@ router.post('/requestIngredOpen', (req, res) => {
                     db.MemberToOpenRequest.create({
                         memberIndex: token.index,
                         productIndex: req.body.productIndex,
-                    }).done((result) => {
+                    }).catch(Sequelize.ValidationError, (err) => {
+                        if (err) {
+                            res.json({
+                                error: 'validation error'
+                            });
+                            return;
+                        }
+                    }).then((result) => {
                         if (!result) {
                             res.status(424).json({
                                 error: "product add failed"
@@ -92,6 +99,7 @@ router.post('/requestIngredOpen', (req, res) => {
           "no product": 해당 제품 없이 없어 삭제 불가
           "update failure": 해당 제품의 상태를 성분 공개 상태로 바꾸는 데에 실패
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 변경
@@ -133,6 +141,13 @@ router.delete('/cancelIngredOpen', (req, res) => {
                 {
                     where: {
                         index: req.body.productIndex
+                    }
+                }).catch(Sequelize.ValidationError, (err) => {
+                    if (err) {
+                        res.json({
+                            error: 'validation error'
+                        });
+                        return;
                     }
                 }).then((result) => {
                     if (!result) {
@@ -337,6 +352,7 @@ router.get('/countIngredOpen', (req, res) => {
           "post add failed: 요청이 저장되지 않음
           "s3 store failed": s3 버켓 안에 이미지 저장 실패
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > result: {
         db안에 생성된 요청정보가 전달
@@ -424,7 +440,16 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
                         reqObj.requestFileUrl = config.s3Url + params.Key;
                     }
 
-                    db.IngredientAnalysis.create(reqObj).done((result) => {
+                    db.IngredientAnalysis.create(
+                        reqObj
+                    ).catch(Sequelize.ValidationError, (err) => {
+                        if (err) {
+                            res.json({
+                                error: 'validation error'
+                            });
+                            return;
+                        }
+                    }).then((result) => {
                         if (!result) {
                             res.status(424).json({
                                 error: "post add failed"
@@ -473,6 +498,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
           "s3 store failed": s3 버켓 안에 이미지 저장 실패
           "s3 delete failed": s3 버켓 안의 이미지 삭제 실패
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 변경
@@ -566,7 +592,14 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
                                 memberIndex: token.index
                             }
                         }
-                    ).then((result) => {
+                    ).catch(Sequelize.ValidationError, (err) => {
+                        if (err) {
+                            res.json({
+                                error: 'validation error'
+                            });
+                            return;
+                        }
+                    }).then((result) => {
                         if (deleteParams.Key === 'NO') {
                             if (addParams.Key === 'NO' && addParams.Body === 'NO') {
                                 res.json({
@@ -894,6 +927,7 @@ router.get('/ingredAnalPost', (req, res) => {
           "s3 store failed": s3 버켓 안에 이미지 저장 실패
           "s3 delete failed": s3 버켓 안의 이미지 삭제 실패
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 변경
@@ -974,7 +1008,14 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
                             index: Number(req.query.index)
                         }
                     }
-                ).then((result) => {
+                ).catch(Sequelize.ValidationError, (err) => {
+                    if (err) {
+                        res.json({
+                            error: 'validation error'
+                        });
+                        return;
+                    }
+                }).then((result) => {
                     if (!result) {
                         res.status(424).json({
                             error: "no such post"
@@ -1058,6 +1099,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
           "post add failed: 요청이 저장되지 않음
           "s3 store failed": s3 버켓 안에 이미지 저장 실패
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > result: {
         db안에 생성된 요청정보가 전달
@@ -1127,7 +1169,16 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
                 queObj.questionFileUrl = config.s3Url + params.Key;
             }
 
-            db.OneToOneQuestion.create(queObj).done((result) => {
+            db.OneToOneQuestion.create(
+                queObj
+            ).catch(Sequelize.ValidationError, (err) => {
+                if (err) {
+                    res.json({
+                        error: 'validation error'
+                    });
+                    return;
+                }
+            }).then((result) => {
                 if (!result) {
                     res.status(424).json({
                         error: "post add failed"
@@ -1174,6 +1225,7 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
           "s3 store failed": s3 버켓 안에 이미지 저장 실패
           "s3 delete failed": s3 버켓 안의 이미지 삭제 실패
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 변경
@@ -1265,7 +1317,14 @@ router.put('/editOneToOne', formidable(), (req, res) => {
                                 memberIndex: token.index
                             }
                         }
-                    ).then((result) => {
+                    ).catch(Sequelize.ValidationError, (err) => {
+                        if (err) {
+                            res.json({
+                                error: 'validation error'
+                            });
+                            return;
+                        }
+                    }).then((result) => {
                         if (deleteParams.Key === 'NO') {
                             if (addParams.Key === 'NO' && addParams.Body === 'NO') {
                                 res.json({
@@ -1594,6 +1653,7 @@ router.get('/oneToOnePost', (req, res) => {
           "s3 store failed": s3 버켓 안에 이미지 저장 실패
           "s3 delete failed": s3 버켓 안의 이미지 삭제 실패
           "unauthorized request": 권한 없는 사용자가 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > success: {
         true: 성공적으로 변경
@@ -1674,7 +1734,14 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
                             index: Number(req.query.index)
                         }
                     }
-                ).then((result) => {
+                ).catch(Sequelize.ValidationError, (err) => {
+                    if (err) {
+                        res.json({
+                            error: 'validation error'
+                        });
+                        return;
+                    }
+                }).then((result) => {
                     if (!result) {
                         res.status(424).json({
                             error: "no such post"

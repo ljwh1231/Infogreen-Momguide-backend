@@ -1,6 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 
 const db = require("../../models/index");
 const util = require("./util");
@@ -18,6 +17,7 @@ const util = require("./util");
           "already reported": 이미 해당 유저는 신고한 댓글
           "comment report state update failed": 댓글을 신고 상태로 바꾸는 데에 실패
           "unauthorized request": 권한 없는 접근
+          "validation error": db에 넣으려는 value가 조건에 맞지 않은 value임
       }
     > {
         db에 삽입된 결과를 전달
@@ -97,7 +97,14 @@ router.post('/comment', (req, res) => {
                                             index: req.body.commentIndex
                                         }
                                     }
-                                ).then(async (result) => {
+                                ).catch(Sequelize.ValidationError, (err) => {
+                                    if (err) {
+                                        res.json({
+                                            error: 'validation error'
+                                        });
+                                        return;
+                                    }
+                                }).then(async (result) => {
                                     if (!result) {
                                         res.status(424).json({
                                             error: "comment report state update failed"
@@ -106,7 +113,14 @@ router.post('/comment', (req, res) => {
                                     } else {
                                         const report = await db.Report.create(
                                             reportObj
-                                        );
+                                        ).catch(Sequelize.ValidationError, (err) => {
+                                            if (err) {
+                                                res.json({
+                                                    error: 'validation error'
+                                                });
+                                                return;
+                                            }
+                                        });
         
                                         comment.addReport(report);
                                         member.addReport(report);
