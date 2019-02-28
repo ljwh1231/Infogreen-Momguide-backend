@@ -646,14 +646,14 @@ router.post('/', formidable({multiples: true}), async (req, res) => {
                 }
             });
         }
-
+        
         if(!member || !product) {
             res.status(400).json({
                 error: 'invalid request'
             });
             return;
         }
-
+        
         const reviewExist = await db.sequelize.query(
             `SELECT * FROM product_review WHERE (member_info_index=${member.index} AND ${req.fields.category}_index=${product.index});`,
             { type: db.sequelize.QueryTypes.SELECT });
@@ -663,7 +663,6 @@ router.post('/', formidable({multiples: true}), async (req, res) => {
             });
             return;
         }
-
 
         const review = await db.ProductReview.create(reviewObject);
         member.addProductReview(review);
