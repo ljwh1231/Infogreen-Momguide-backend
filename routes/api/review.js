@@ -26,14 +26,24 @@ router.get('/', async (req, res) => {
                 index: req.query.id
             }
         });
+
+        let product;
+        if (review.living_index) {
+            product = await db.sequelize.query(`SELECT * FROM living WHERE \`index\`=${review.living_index}`);
+        } else {
+            product = await db.sequelize.query(`SELECT * FROM cosmetic WHERE \`index\`=${review.cosmetic_index}`);
+        }
+
         const reviewImages = await review.getProductReviewImages();
         const additionalReviews = await review.getProductAdditionalReviews();
         res.json({
             review: review,
             images: reviewImages,
-            additionalReview: additionalReviews
+            additionalReview: additionalReviews,
+            product: product[0][0]
         });
     } catch(e) {
+        console.log(e);
         res.status(400).json({
             error: "invalid request"
         });
@@ -84,6 +94,7 @@ router.get('/member/list', async (req, res) => {
 
         let reviews = await member.getProductReviews();
         reviews = reviews.filter((review) => (req.query.category === 'living' ? review.dataValues.living_index !== null : review.dataValues.cosmetic_index !== null));
+        const totalLength = reviews.length;
         reviews = (reviews.slice((page-1) * pageSize, page * pageSize));
         const result = [];
 
@@ -112,7 +123,7 @@ router.get('/member/list', async (req, res) => {
 
         res.json({
             reviews: result,
-            totalPages: Math.floor((reviews.length+5) / pageSize)
+            totalPages: Math.floor((totalLength + pageSize - 1) / pageSize)
         });
     } catch(e) {
         console.log(e);
