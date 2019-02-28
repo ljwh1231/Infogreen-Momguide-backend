@@ -554,7 +554,9 @@ router.post('/comment', (req, res) => {
                 const event = result;
 
                 db.MemberInfo.findOne({
-                    index: token.index
+                    where: {
+                        index: token.index
+                    }
                 }).then(async (result) => {
                     if (!result) {
                         res.status(424).json({

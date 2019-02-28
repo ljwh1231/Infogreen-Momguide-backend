@@ -61,7 +61,12 @@ function scheduler() {
                         }
                     }
                 } else {
-
+                    let recentOne;
+                    if (additionalReviews.length === 1) {
+                        recentOne = additionalReviews[0];
+                    } else {    
+                        
+                    }
                 }
             }
         });
