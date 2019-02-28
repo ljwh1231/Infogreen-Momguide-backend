@@ -66,11 +66,13 @@ async function deleteImage(res, folderName, fileName, fileUrl) {
 }
 
 /*
-    > admin이 이벤트를 작성하는 api
+    > admin이 이벤트/당첨자 발표를 작성하는 api
     > POST /api/event/post
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. form data로 데이터 전달. 각 데이터의 이름은 디비와 통일.
-    > 필수정보: title(포스트 제목),subtitle(포스트 부제목), content(포스트 내용), expirationDate(만료 날짜), titleImage(표지 이미지), contentImage(내용 이미지)
-      content는 없을 경우 빈 string "" 보낼 것. exirationDate의 형식은 "YYYY MM DD HH:MM:SS"(ex> 2019-02-20 00:00:00)
+    > 필수정보: title(포스트 제목),subtitle(포스트 부제목), content(포스트 내용), titleImage(표지 이미지), contentImage(내용 이미지)
+      content는 없을 경우 빈 string "" 보낼 것.
+    > 선택정보: expirationDate(만료 날짜), exirationDate의 형식은 "YYYY MM DD HH:MM:SS"(ex> 2019-02-20 00:00:00),
+      이벤트일 때만 만료 일자를 보내고 당첨자 발표일 땐 보내지 않기.
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "unauthorized request": 사용 권한이 없는 접근
@@ -105,24 +107,27 @@ router.post('/post', formidable(), (req, res) => {
         }
 
         if (!req.fields.title || !req.fields.subtitle || !req.fields.content || !req.files.titleImage || typeof req.files.titleImage === 'undefined' 
-                || !req.files.contentImage || typeof req.files.contentImage === 'undefined' || !req.fields.expirationDate) {
+                || !req.files.contentImage || typeof req.files.contentImage === 'undefined') {
             res.status(400).json({
                 error: "invalid request"
             });
             return;
         }
 
-        if (!moment(req.fields.expirationDate).isValid() || !moment(req.fields.expirationDate).isAfter(moment())) {
-            res.status(400).json({
-                error: "invalid request"
-            });
-            return;
+        if (req.fields.expirationDate) {
+            if (!moment(req.fields.expirationDate).isValid() || !moment(req.fields.expirationDate).isAfter(moment())) {
+                res.status(400).json({
+                    error: "invalid request"
+                });
+                return;
+            } else {
+                postObj.expirationDate = moment(req.fields.expirationDate).format("YYYY-MM-DD HH:MM:SS");
+            }
         }
 
         postObj.title = req.fields.title;
         postObj.subtitle = req.fields.subtitle;
         postObj.content = req.fields.content;
-        postObj.expirationDate = moment(req.fields.expirationDate).format("YYYY-MM-DD HH:MM:SS");
         
         db.Event.findAll({
             limit: 1,
@@ -174,12 +179,14 @@ router.post('/post', formidable(), (req, res) => {
 });
 
 /*
-    > admin이 이벤트를 수정하는 api
+    > admin이 이벤트/당첨자발표를 수정하는 api
     > PUT /api/event/post?index=1
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. form data로 데이터 전달. 각 데이터의 이름은 디비와 통일.
-    > 필수정보: title(포스트 제목),subtitle(포스트 부제목), content(포스트 내용), expirationDate(만료 일자) titleImage(표지 사진), contentImage(내용 사진) 
-      content는 없을 경우 빈 string "" 보낼 것, exirationDate의 형식은 "YYYY MM DD HH:MM:SS"(ex> 2019-02-20 00:00:00),
+    > 필수정보: title(포스트 제목),subtitle(포스트 부제목), content(포스트 내용), titleImage(표지 사진), contentImage(내용 사진) 
+      content는 없을 경우 빈 string "" 보낼 것.
       해당하는 포스트의 index를 req.query.index로 전달
+    > 선택정보: expirationDate(만료 일자), exirationDate의 형식은 "YYYY MM DD HH:MM:SS"(ex> 2019-02-20 00:00:00)
+      이벤트일 때만 만료 일자를 보내고 당첨자 발표일 땐 보내지 않기.
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "unauthorized request": 사용 권한이 없는 접근
@@ -216,24 +223,27 @@ router.put('/post', formidable(), (req, res) => {
         }
 
         if (!req.fields.title || !req.fields.subtitle || !req.fields.content || !req.files.titleImage || typeof req.files.titleImage === 'undefined' 
-                || !req.files.contentImage || typeof req.files.contentImage === 'undefined' || !req.fields.expirationDate) {
+                || !req.files.contentImage || typeof req.files.contentImage === 'undefined') {
             res.status(400).json({
                 error: "invalid request"
             });
             return;
         }
 
-        if (!moment(req.fields.expirationDate).isValid() || !moment(req.fields.expirationDate).isAfter(moment())) {
-            res.status(400).json({
-                error: "invalid request"
-            });
-            return;
+        if (req.fields.expirationDate) {
+            if (!moment(req.fields.expirationDate).isValid() || !moment(req.fields.expirationDate).isAfter(moment())) {
+                res.status(400).json({
+                    error: "invalid request"
+                });
+                return;
+            } else {
+                postObj.expirationDate = moment(req.fields.expirationDate).format("YYYY-MM-DD HH:MM:SS");
+            }
         }
 
         postObj.title = req.fields.title;
         postObj.subtitle = req.fields.subtitle;
         postObj.content = req.fields.content;
-        postObj.expirationDate = moment(req.fields.expirationDate).format("YYYY-MM-DD HH:MM:SS");
         
         db.Event.findOne({
             where: {
@@ -295,7 +305,7 @@ router.put('/post', formidable(), (req, res) => {
 });
 
 /*
-    > admin이 이벤트를 삭제하는 api
+    > admin이 이벤트/당첨자발표를 삭제하는 api
     > DELETE /api/event/post?index=1
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.index로 삭제하고자 하는 포스트의 index를 전달
     > error: {
@@ -365,9 +375,9 @@ router.delete('/post', (req, res) => {
 });
 
 /*
-    > 이벤트 목록 불러오는 api
+    > 이벤트/당첨자발표 목록 불러오는 api
     > GET /api/event/postList?state=total&order=latest&page=1
-    > req.query.page로 해당 페이지 넘버를 전달, req.query.state로 보기 옵션을 전달(total은 전체, progress는 진행 중인 이벤트, finished는 종료된 이벤트)
+    > req.query.page로 해당 페이지 넘버를 전달, req.query.state로 보기 옵션을 전달(total은 전체, progress는 진행 중인 이벤트, finished는 종료된 이벤트, winner는 당첨자발표)
       req.query.order로 정렬 방식을 전달(latest가 최신순, recommend는 추천순)
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
@@ -385,11 +395,13 @@ router.get('/postList', (req, res) => {
     let showCondition = {};
 
     if (req.query.state === 'total') {
-        showCondition = {};
+        showCondition = {expirationDate: {$ne: null}};
     } else if (req.query.state === 'progress') {
         showCondition = {expirationDate: {$gte: currentDate}};
     } else if (req.query.state === 'finished') {
         showCondition = {expirationDate: {$lt: currentDate}};
+    } else if (req.query.state === 'winner') {
+        showCondition = {expirationDate: null};
     } else {
         res.status(400).json({
             error: "invalid request"
@@ -496,9 +508,9 @@ router.get('/postList', (req, res) => {
 });
 
 /*
-    > 유저가 이벤트에 댓글을 작성하는 api
+    > 유저가 이벤트/당첨자발표에 댓글을 작성하는 api
     > POST /api/event/comment
-    > req.body.content로 댓글 내용, req.body.eventIndex로 해당 이벤트의 index 전달
+    > req.body.content로 댓글 내용, req.body.eventIndex로 해당 포스트 index 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "no such post": 존재하지 않는 포스트
@@ -579,9 +591,9 @@ router.post('/comment', (req, res) => {
 });
 
 /*
-    > 유저가 이벤트에 작성한 댓글을 삭제하는 api(대댓글도 똑같으므로 같은 api로 사용한다.)
+    > 유저가 이벤트/당첨자발표에 작성한 댓글을 삭제하는 api(대댓글도 똑같으므로 같은 api로 사용한다.)
     > DELETE /api/event/comment
-    > req.body.index로 댓글의 index, req.body.eventIndex로 해당 이벤트의 index 전달
+    > req.body.index로 댓글의 index, req.body.eventIndex로 해당 포스트 index 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "no such comment": 존재하지 않는 댓글
@@ -668,9 +680,9 @@ router.delete('/comment', (req, res) => {
 });
 
 /*
-    > 유저가 이벤트에 작성한 댓글을 수정하는 api(대댓글도 똑같으므로 같은 api로 사용한다.)
+    > 유저가 이벤트/당첨자발표에 작성한 댓글을 수정하는 api(대댓글도 똑같으므로 같은 api로 사용한다.)
     > PUT /api/event/comment
-    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.content로 수정 내용, req.body.index로 댓글의 index, req.body.eventIndex로 해당 꿀팁의 index 전달
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.content로 수정 내용, req.body.index로 댓글의 index, req.body.eventIndex로 해당 포스트의 index 전달
     > error: {
           "invalid request": 올바른 req가 전달되지 않음
           "no such comment": 존재하지 않는 댓글
@@ -757,7 +769,7 @@ router.put('/comment', (req, res) => {
 });
 
 /*
-    > 유저가 이벤트 댓글에 대댓글을 작성하는 api
+    > 유저가 이벤트/당첨자발표 댓글에 대댓글을 작성하는 api
     > POST /api/event/childComment
     > req.body.content로 댓글 내용, req.body.commentIndex로 해당 댓글의 index를 전달
     > error: {
@@ -862,7 +874,7 @@ router.post('/childComment', (req, res) => {
 });
 
 /*
-    > 이벤트 포스트 하나의 본문과 그 딸린 댓글들을 불러오는 api
+    > 이벤트/당첨자발표 포스트 하나의 본문과 그 딸린 댓글들을 불러오는 api
     > GET /api/event/post?index=1&order=latest&page=1
     > req.query.index 해당 팁의 index를 전달, req.query.page에 해당 페이지 넘버를 전달
       req.query.order로 정렬 순서 전달.(latest: 최신순, recommend: 추천순)
@@ -873,7 +885,7 @@ router.post('/childComment', (req, res) => {
           "unauthorized request": 권한 없는 접근
       }
     > {
-        event: 이벤트 본문,
+        event: 이벤트/당첨자발표 본문,
         comments: 댓글 정보를 배열로 전달. 각 댓글 객체 안의 creator 객체로 작성자의 정보를 전달.(이미 삭제된 댓글의 경우 작성자 정보가 빈 객체로 전달.)
             like, hate는 로그인한 유저가 해당 댓글에 좋아요/싫어요를 했는지의 여부를 전달. 만약 둘 다 하지 않았거나 로그인하지 않은 상태라면 둘 다 false를 전달.
         totalPages: 전체 페이지
@@ -1010,7 +1022,7 @@ router.get('/post', (req, res) => {
 });
 
 /*
-    > 이벤트 포스트의 특정 댓글의 대댓글들을 불러오는 api
+    > 이벤트/당첨자발표 포스트의 특정 댓글의 대댓글들을 불러오는 api
     > GET /api/event/childComment?index=1&page=1
     > req.query.index 해당 댓글의 index를 전달, req.query.page에 해당 페이지 넘버를 전달
     > error: {
@@ -1243,7 +1255,7 @@ router.post('/application', (req, res) => {
 });
 
 /*
-    > 유저가 해당 이벤트 포스트를 열었을 때 좋아요를 했는지 안했는지 체크하는 api
+    > 유저가 해당 이벤트/당첨자발표 포스트를 열었을 때 좋아요를 했는지 안했는지 체크하는 api
     > GET /api/event/post/like?index=1
     > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.query.index로 확인하고자 하는 이벤트의 index 전달.
     > error: {
@@ -1252,8 +1264,8 @@ router.post('/application', (req, res) => {
           "unauthorized request": 권한 없는 접근
       }
     > like: {
-        true: 유저가 이 이벤트에 좋아요를 했음
-        false: 유저가 이 이벤트에 좋아요를 하지 않았음
+        true: 유저가 이 이벤트/당첨자발표에 좋아요를 했음
+        false: 유저가 이 이벤트/당첨자발표에 좋아요를 하지 않았음
       }
 */
 router.get('/post/like', (req, res) => {

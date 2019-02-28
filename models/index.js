@@ -57,13 +57,11 @@ const OneToOneQuestion = require('./OneToOneQuestion')(sequelize, Sequelize);
 
 const HoneyTip = require('./HoneyTip')(sequelize, Sequelize);
 const Event = require('./Event')(sequelize, Sequelize);
-const Winner = require('./Winner')(sequelize, Sequelize);
 
 const Comment = require('./Comment')(sequelize, Sequelize);
 
 HoneyTip.hasMany(Comment);
 Event.hasMany(Comment);
-Winner.hasMany(Comment);
 MemberInfo.hasMany(Comment);
 
 MemberInfo.belongsToMany(Event, {through: 'member_to_event'});
@@ -90,7 +88,6 @@ MemberInfo.hasMany(LikeOrHate);
 Comment.hasMany(LikeOrHate);
 HoneyTip.hasMany(LikeOrHate);
 Event.hasMany(LikeOrHate);
-Winner.hasMany(LikeOrHate);
 ProductReview.hasMany(LikeOrHate);
 
 const Report = require('./Report')(sequelize, Sequelize);
@@ -121,7 +118,6 @@ module.exports = {
     OneToOneQuestion,
     HoneyTip,
     Event,
-    Winner,
     Comment,
     ProductReview,
     ProductReviewImage,
