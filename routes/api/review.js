@@ -78,6 +78,7 @@ router.get('/member/list', async (req, res) => {
             });
             return;
         }
+
         const page = req.query.page ? req.query.page : 1;
         const pageSize = 6;
 
@@ -89,9 +90,23 @@ router.get('/member/list', async (req, res) => {
         for(const i in reviews) {
             const review = reviews[i];
             const additionalReviews = await review.getProductAdditionalReviews();
+
+            const product = (req.query.category === 'living') ?
+                await db.LivingDB.findOne({
+                    where: {
+                        index: review.dataValues.living_index
+                    }
+                }) :
+                await db.CosmeticDB.findOne({
+                    where : {
+                        index: review.dataValues.cosmetic_index
+                    }
+                });
+
             result.push({
                 review: review,
-                recentDate: (additionalReviews.length ? additionalReviews[additionalReviews.length - 1].date : null)
+                recentDate: (additionalReviews.length ? additionalReviews[additionalReviews.length - 1].date : null),
+                product: product
             });
         }
 
@@ -100,6 +115,7 @@ router.get('/member/list', async (req, res) => {
             totalPages: Math.floor((reviews.length+5) / pageSize)
         });
     } catch(e) {
+        console.log(e);
         res.status(400).json({
             error: "invalid request"
         });
