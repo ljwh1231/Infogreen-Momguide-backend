@@ -5,6 +5,7 @@ const s3 = new AWS.S3();
 const formidable = require('express-formidable');
 const moment = require('moment');
 require('moment-timezone');
+const Sequelize = require('sequelize');
 
 const db = require("../../models/index");
 const config = require('../../config/config');

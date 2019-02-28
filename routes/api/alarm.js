@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const formidable = require('express-formidable');
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
+const Sequelize = require('sequelize');
 
 const db = require("../../models/index");
 const util = require("./util");

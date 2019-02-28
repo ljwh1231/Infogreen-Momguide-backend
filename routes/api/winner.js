@@ -3,6 +3,7 @@ const router = express.Router();
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
 const formidable = require('express-formidable');
+const Sequelize = require('sequelize');
 
 const db = require("../../models/index");
 const config = require('../../config/config');
