@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 
 const db = require("../../models/index");
 const util = require("./util");
-const config = require('../../config/config');
 
 /*
     > 유저가 특정 댓글에 좋아요하는 api

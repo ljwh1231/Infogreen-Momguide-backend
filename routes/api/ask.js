@@ -9,39 +9,7 @@ require('moment-timezone');
 
 const db = require("../../models/index");
 const config = require('../../config/config');
-
-// function to get extension in filename
-function getExtension(fileName) {
-    const list = fileName.split('.');
-    return '.' + list[list.length-1];
-}
-
-// function to decode user token
-function decodeToken(res, token) {
-
-    if (!token) {
-        res.status(400).json({
-            error: "invalid request"
-        });
-        return;
-    }
-
-    token = token.substring(7);
-
-    const promise = new Promise(
-        (resolve, reject) => {
-            jwt.verify(token, config.jwtSecret, (err, decoded) => {
-                if(err) {
-                    reject(err);
-                } else {
-                    resolve(decoded);
-                }
-            })
-        }
-    );
-
-    return promise;
-}
+const util = require('./util');
 
 /*
     > 성분 공개 요청
@@ -61,7 +29,7 @@ function decodeToken(res, token) {
 router.post('/requestIngredOpen', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -132,7 +100,7 @@ router.post('/requestIngredOpen', (req, res) => {
 router.delete('/cancelIngredOpen', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -209,7 +177,7 @@ router.get('/ingredOpen', (req, res) => {
     let finalResult = [];
     const limit = 10;
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -282,7 +250,7 @@ router.get('/ingredOpen', (req, res) => {
 router.get('/checkIngredOpen', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -388,7 +356,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
     moment.tz.setDefault("Asia/Seoul");
     reqObj = {};
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -444,7 +412,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
                             });
                             return;
                         } else {
-                            params.Key = "ingredient-analysis-files/request-files/" + nextIndex.toString() + getExtension(req.files.requestFile.name);
+                            params.Key = "ingredient-analysis-files/request-files/" + nextIndex.toString() + util.getExtension(req.files.requestFile.name);
                             params.Body = require('fs').createReadStream(req.files.requestFile.path);   
                         }
                     } else {
@@ -527,7 +495,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
 
     reqObj = {};
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.query.index) {
             res.status(400).json({
                 error: "invalid request"
@@ -574,7 +542,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
                             });
                             return;
                         } else {
-                            addParams.Key = "ingredient-analysis-files/request-files/" + Number(req.query.index).toString() + getExtension(req.files.requestFile.name);
+                            addParams.Key = "ingredient-analysis-files/request-files/" + Number(req.query.index).toString() + util.getExtension(req.files.requestFile.name);
                             addParams.Body = require('fs').createReadStream(req.files.requestFile.path);
                             reqObj.requestFileUrl = config.s3Url + addParams.Key;   
                         }
@@ -585,7 +553,7 @@ router.put('/editIngredAnal', formidable(), (req, res) => {
                     }
 
                     if (result.dataValues.requestFileUrl !== null) {
-                        deleteParams.Key = "ingredient-analysis-files/request-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.requestFileUrl);
+                        deleteParams.Key = "ingredient-analysis-files/request-files/" + Number(req.query.index).toString() + util.getExtension(result.dataValues.requestFileUrl);
                     } else {
                         deleteParams.Key = "NO";
                     }
@@ -691,7 +659,7 @@ router.delete('/cancelIngredAnal', (req, res) => {
         Key: null
     };
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -712,13 +680,13 @@ router.delete('/cancelIngredAnal', (req, res) => {
                 return;
             } else {
                 if (result.dataValues.requestFileUrl !== null) {
-                    requestParams.Key = "ingredient-analysis-files/request-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.requestFileUrl);
+                    requestParams.Key = "ingredient-analysis-files/request-files/" + Number(req.query.index).toString() + util.getExtension(result.dataValues.requestFileUrl);
                 } else {
                     requestParams.Key = "NO";
                 }
 
                 if (result.dataValues.responseFileUrl !== null) {
-                    responseParams.Key = "ingredient-analysis-files/response-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.responseFileUrl);
+                    responseParams.Key = "ingredient-analysis-files/response-files/" + Number(req.query.index).toString() + util.getExtension(result.dataValues.responseFileUrl);
                 } else {
                     responseParams.Key = "NO";
                 }
@@ -818,7 +786,7 @@ router.get('/ingredAnal', (req, res) => {
     let token = req.headers['authorization'];
     const limit = 6;
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -882,7 +850,7 @@ router.get('/ingredAnal', (req, res) => {
 router.get('/ingredAnalPost', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -947,7 +915,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
         Key: null
     };
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
@@ -984,7 +952,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
                 return;
             } else {
                 if (!(typeof req.files.responseFile === 'undefined')) {
-                    addParams.Key = "ingredient-analysis-files/response-files/" + Number(req.query.index).toString() + getExtension(req.files.responseFile.name);
+                    addParams.Key = "ingredient-analysis-files/response-files/" + Number(req.query.index).toString() + util.getExtension(req.files.responseFile.name);
                     addParams.Body = require('fs').createReadStream(req.files.responseFile.path);
                     resObj.responseFileUrl = config.s3Url + addParams.Key;
                 } else {
@@ -994,7 +962,7 @@ router.put('/responseIngredAnal', formidable(), (req, res) => {
                 }
 
                 if (result.dataValues.responseFileUrl !== null) {
-                    deleteParams.Key = "ingredient-analysis-files/response-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.responseFileUrl);
+                    deleteParams.Key = "ingredient-analysis-files/response-files/" + Number(req.query.index).toString() + util.getExtension(result.dataValues.responseFileUrl);
                 } else {
                     deleteParams.Key = "NO";
                 }
@@ -1108,7 +1076,7 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
 
     queObj = {};
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1147,7 +1115,7 @@ router.post('/questionOneToOne', formidable(), (req, res) => {
                     });
                     return;
                 } else {
-                    params.Key = "one-to-one-question-files/question-files/" + nextIndex.toString() + getExtension(req.files.questionFile.name);
+                    params.Key = "one-to-one-question-files/question-files/" + nextIndex.toString() + util.getExtension(req.files.questionFile.name);
                     params.Body = require('fs').createReadStream(req.files.questionFile.path);   
                 }
             } else {
@@ -1228,7 +1196,7 @@ router.put('/editOneToOne', formidable(), (req, res) => {
 
     queObj = {};
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.query.index) {
             res.status(400).json({
                 error: "invalid request"
@@ -1273,7 +1241,7 @@ router.put('/editOneToOne', formidable(), (req, res) => {
                             });
                             return;
                         } else {
-                            addParams.Key = "one-to-one-question-files/question-files/" + Number(req.query.index).toString() + getExtension(req.files.questionFile.name);
+                            addParams.Key = "one-to-one-question-files/question-files/" + Number(req.query.index).toString() + util.getExtension(req.files.questionFile.name);
                             addParams.Body = require('fs').createReadStream(req.files.questionFile.path);
                             queObj.questionFileUrl = config.s3Url + addParams.Key;   
                         }
@@ -1284,7 +1252,7 @@ router.put('/editOneToOne', formidable(), (req, res) => {
                     }
 
                     if (result.dataValues.questionFileUrl !== null) {
-                        deleteParams.Key = "one-to-one-question-files/question-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.questionFileUrl);
+                        deleteParams.Key = "one-to-one-question-files/question-files/" + Number(req.query.index).toString() + util.getExtension(result.dataValues.questionFileUrl);
                     } else {
                         deleteParams.Key = "NO";
                     }
@@ -1390,7 +1358,7 @@ router.delete('/cancelOneToOne', (req, res) => {
         Key: null
     };
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1411,13 +1379,13 @@ router.delete('/cancelOneToOne', (req, res) => {
                 return;
             } else {
                 if (result.dataValues.questionFileUrl !== null) {
-                    questionParams.Key = "one-to-one-question-files/question-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.questionFileUrl);
+                    questionParams.Key = "one-to-one-question-files/question-files/" + Number(req.query.index).toString() + util.getExtension(result.dataValues.questionFileUrl);
                 } else {
                     questionParams.Key = "NO";
                 }
 
                 if (result.dataValues.answerFileUrl !== null) {
-                    answerParams.Key = "one-to-one-question-files/answer-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.answerFileUrl);
+                    answerParams.Key = "one-to-one-question-files/answer-files/" + Number(req.query.index).toString() + util.getExtension(result.dataValues.answerFileUrl);
                 } else {
                     answerParams.Key = "NO";
                 }
@@ -1517,7 +1485,7 @@ router.get('/oneToOne', (req, res) => {
     let token = req.headers['authorization'];
     const limit = 6;
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1582,7 +1550,7 @@ router.get('/oneToOne', (req, res) => {
 router.get('/oneToOnePost', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1647,7 +1615,7 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
         Key: null
     };
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
@@ -1684,7 +1652,7 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
                 return;
             } else {
                 if (!(typeof req.files.answerFile === 'undefined')) {
-                    addParams.Key = "one-to-one-question-files/answer-files/" + Number(req.query.index).toString() + getExtension(req.files.answerFile.name);
+                    addParams.Key = "one-to-one-question-files/answer-files/" + Number(req.query.index).toString() + util.getExtension(req.files.answerFile.name);
                     addParams.Body = require('fs').createReadStream(req.files.answerFile.path);
                     ansObj.answerFileUrl = config.s3Url + addParams.Key;
                 } else {
@@ -1694,7 +1662,7 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
                 }
 
                 if (result.dataValues.answerFileUrl !== null) {
-                    deleteParams.Key = "one-to-one-question-files/answer-files/" + Number(req.query.index).toString() + getExtension(result.dataValues.answerFileUrl);
+                    deleteParams.Key = "one-to-one-question-files/answer-files/" + Number(req.query.index).toString() + util.getExtension(result.dataValues.answerFileUrl);
                 } else {
                     deleteParams.Key = "NO";
                 }

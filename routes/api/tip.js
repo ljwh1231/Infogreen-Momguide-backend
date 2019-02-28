@@ -9,39 +9,7 @@ require('moment-timezone');
 
 const db = require("../../models/index");
 const config = require('../../config/config');
-
-// function to get extension in filename
-function getExtension(fileName) {
-    const list = fileName.split('.');
-    return '.' + list[list.length-1];
-}
-
-// function to decode user token
-function decodeToken(res, token) {
-
-    if (!token) {
-        res.status(400).json({
-            error: "invalid request"
-        });
-        return;
-    }
-
-    token = token.substring(7);
-
-    const promise = new Promise(
-        (resolve, reject) => {
-            jwt.verify(token, config.jwtSecret, (err, decoded) => {
-                if(err) {
-                    reject(err);
-                } else {
-                    resolve(decoded);
-                }
-            })
-        }
-    );
-
-    return promise;
-}
+const util = require('./util');
 
 // function to put an image into s3 bucket
 async function putImage(res, file, folderName, newName) {
@@ -61,7 +29,7 @@ async function putImage(res, file, folderName, newName) {
         });
         return;
     } else {
-        params.Key = folderName + newName + getExtension(file.name);
+        params.Key = folderName + newName + util.getExtension(file.name);
         params.Body = require('fs').createReadStream(file.path);
     }
 
@@ -84,7 +52,7 @@ async function deleteImage(res, folderName, fileName, fileUrl) {
         Key: null,
     };
 
-    params.Key = folderName + fileName + getExtension(fileUrl);
+    params.Key = folderName + fileName + util.getExtension(fileUrl);
 
     await s3.deleteObject(params, (err, data) => {
         if (err){
@@ -121,7 +89,7 @@ router.post('/post', formidable(), (req, res) => {
 
     postObj = {};
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -214,7 +182,7 @@ router.put('/post', formidable(), (req, res) => {
 
     postObj = {};
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -311,7 +279,7 @@ router.put('/post', formidable(), (req, res) => {
 router.delete('/post', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -493,7 +461,7 @@ router.get('/postList', (req, res) => {
 router.post('/comment', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -571,7 +539,7 @@ router.post('/comment', (req, res) => {
 router.delete('/comment', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -653,7 +621,7 @@ router.delete('/comment', (req, res) => {
 router.put('/comment', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -735,7 +703,7 @@ router.put('/comment', (req, res) => {
 router.post('/childComment', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -890,7 +858,7 @@ router.get('/post', (req, res) => {
                         let hate = false;
 
                         if (req.headers['authorization']) {
-                            const token = await decodeToken(res, req.headers['authorization']).catch((error) => {
+                            const token = await util.decodeToken(req.headers['authorization'], res).catch((error) => {
                                 res.status(403).json({
                                     error: "unauthorized request"
                                 });
@@ -1024,7 +992,7 @@ router.get('/childComment', (req, res) => {
                         let hate = false;
 
                         if (req.headers['authorization']) {
-                            const token = await decodeToken(res, req.headers['authorization']).catch((error) => {
+                            const token = await util.decodeToken(req.headers['authorization'], res).catch((error) => {
                                 res.status(403).json({
                                     error: "unauthorized request"
                                 });
@@ -1114,7 +1082,7 @@ router.get('/post/like', (req, res) => {
 
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"

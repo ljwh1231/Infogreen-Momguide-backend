@@ -7,43 +7,10 @@ const bcrypt = require('bcrypt-nodejs');
 const jwt = require('jsonwebtoken');
 const formidable = require('express-formidable');
 const sgMail = require('@sendgrid/mail');
-const Sequelize = require('sequelize');
 
 const db = require("../../models/index");
 const config = require('../../config/config');
-
-// function to get extension in filename
-function getExtension(fileName) {
-    const list = fileName.split('.');
-    return '.' + list[list.length-1];
-}
-
-// function to decode user token
-function decodeToken(res, token) {
-
-    if (!token) {
-        res.status(400).json({
-            error: "invalid request"
-        })
-        return;
-    }
-
-    token = token.substring(7);
-
-    const promise = new Promise(
-        (resolve, reject) => {
-            jwt.verify(token, config.jwtSecret, (err, decoded) => {
-                if(err) {
-                    reject(err);
-                } else {
-                    resolve(decoded);
-                }
-            })
-        }
-    );
-
-    return promise;
-}
+const util = require('./util');
 
 // async function to find one in product db
 async function findProduct(prevResult) {
@@ -205,7 +172,7 @@ router.post('/register', formidable(), (req, res) => {
                                         });
                                         return;
                                     } else {
-                                        params.Key = "profile-images/" + infoObj.email + getExtension(req.files.image.name);
+                                        params.Key = "profile-images/" + infoObj.email + util.getExtension(req.files.image.name);
                                         params.Body = require('fs').createReadStream(req.files.image.path);
                                     }
                                 } else {
@@ -354,7 +321,7 @@ router.get('/editProfile/checkPassword', (req, res) => {
         return;
     }
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -488,7 +455,7 @@ router.post('/login', (req, res) => {
 router.post('/refreshToken', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -550,7 +517,7 @@ router.post('/refreshToken', (req, res) => {
 router.get('/info', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -603,7 +570,7 @@ router.get('/info', (req, res) => {
 router.post('/addHomeCosmetic', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -654,7 +621,7 @@ router.post('/addHomeCosmetic', (req, res) => {
 router.post('/addHomeLiving', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -706,7 +673,7 @@ router.post('/addHomeLiving', (req, res) => {
 router.delete('/cancelHomeCosmetic', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -760,7 +727,7 @@ router.delete('/cancelHomeCosmetic', (req, res) => {
 router.delete('/cancelHomeLiving', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -814,7 +781,7 @@ router.delete('/cancelHomeLiving', (req, res) => {
 router.post('/addLikeCosmetic', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -865,7 +832,7 @@ router.post('/addLikeCosmetic', (req, res) => {
 router.post('/addLikeLiving', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -917,7 +884,7 @@ router.post('/addLikeLiving', (req, res) => {
 router.delete('/cancelLikeCosmetic', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -971,7 +938,7 @@ router.delete('/cancelLikeCosmetic', (req, res) => {
 router.delete('/cancelLikeLiving', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName || !req.body.productIndex) {
             res.status(400).json({
                 error: "invalid request"
@@ -1036,7 +1003,7 @@ router.get('/homeProduct', (req, res) => {
 
     let limit = 10;
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1150,7 +1117,7 @@ router.get('/likeProduct', (req, res) => {
 
     let limit = 10;
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1261,7 +1228,7 @@ router.get('/checkHomeLike', (req, res) => {
     let token = req.headers['authorization'];
     let finalResult = {};
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1386,7 +1353,7 @@ router.post('/requestPassword', (req, res) => {
 router.put('/editProfile/resetPassword', (req, res) => {
     let token = req.headers['authorization'];
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1486,7 +1453,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
 
     const infoObj = {};
 
-    decodeToken(res, token).then((token) => {
+    util.decodeToken(token, res).then((token) => {
         if (!token.index || !token.email || !token.nickName) {
             res.status(400).json({
                 error: "invalid request"
@@ -1560,7 +1527,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
         }
 
         if (!(typeof req.files.image === 'undefined')) {
-            addParams.Key = "profile-images/" + token.email + getExtension(req.files.image.name);
+            addParams.Key = "profile-images/" + token.email + util.getExtension(req.files.image.name);
             addParams.Body = require('fs').createReadStream(req.files.image.path);
         } else {
             addParams.Key = "NO";
@@ -1612,7 +1579,7 @@ router.put('/editProfile/edit', formidable(), (req, res) => {
                         }
                     });
                 } else {
-                    deleteParams.Key = "profile-images/" + token.email + getExtension(result.dataValues.photoUrl);
+                    deleteParams.Key = "profile-images/" + token.email + util.getExtension(result.dataValues.photoUrl);
                     s3.deleteObject(deleteParams, (err, data) => {
                         if (err) {
                             res.status(424).json({
