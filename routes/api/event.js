@@ -907,7 +907,11 @@ router.get('/post', (req, res) => {
             });
             return;
         } else {
-            event.getComments().then(async (comments) => {
+            event.getComments({
+                where: {
+                    parentIndex: null
+                }
+            }).then(async (comments) => {
                 if (!comments) {
                     res.status(424).json({
                         error: "find error"

@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const moment = require('moment');
 require('moment-timezone');
+const Sequelize = require('sequelize');
 
 const db = require("../models/index");
 
