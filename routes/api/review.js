@@ -87,7 +87,10 @@ router.get('/member/list', async (req, res) => {
             });
         }
 
-        res.json(result);
+        res.json({
+            reviews: result,
+            totalPages: Math.floor((reviews.length+5) / pageSize)
+        });
     } catch(e) {
         res.status(400).json({
             error: "invalid request"
