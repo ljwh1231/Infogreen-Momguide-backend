@@ -26,14 +26,24 @@ router.get('/', async (req, res) => {
                 index: req.query.id
             }
         });
+
+        let product;
+        if (review.living_index) {
+            product = await db.sequelize.query(`SELECT * FROM living WHERE \`index\`=${review.index}`);
+        } else {
+            product = await db.sequelize.query(`SELECT * FROM cosmetic WHERE \`index\`=${review.index}`);
+        }
+
         const reviewImages = await review.getProductReviewImages();
         const additionalReviews = await review.getProductAdditionalReviews();
         res.json({
             review: review,
             images: reviewImages,
-            additionalReview: additionalReviews
+            additionalReview: additionalReviews,
+            product: product[0][0]
         });
     } catch(e) {
+        console.log(e);
         res.status(400).json({
             error: "invalid request"
         });
