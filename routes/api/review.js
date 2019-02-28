@@ -29,9 +29,9 @@ router.get('/', async (req, res) => {
 
         let product;
         if (review.living_index) {
-            product = await db.sequelize.query(`SELECT * FROM living WHERE \`index\`=${review.index}`);
+            product = await db.sequelize.query(`SELECT * FROM living WHERE \`index\`=${review.living_index}`);
         } else {
-            product = await db.sequelize.query(`SELECT * FROM cosmetic WHERE \`index\`=${review.index}`);
+            product = await db.sequelize.query(`SELECT * FROM cosmetic WHERE \`index\`=${review.cosmetic_index}`);
         }
 
         const reviewImages = await review.getProductReviewImages();
