@@ -83,6 +83,7 @@ router.get('/member/list', async (req, res) => {
         const pageSize = 6;
 
         let reviews = await member.getProductReviews();
+        const totalLength = reviews.length;
         reviews = reviews.filter((review) => (req.query.category === 'living' ? review.dataValues.living_index !== null : review.dataValues.cosmetic_index !== null));
         reviews = (reviews.slice((page-1) * pageSize, page * pageSize));
         const result = [];
@@ -112,7 +113,7 @@ router.get('/member/list', async (req, res) => {
 
         res.json({
             reviews: result,
-            totalPages: Math.floor((reviews.length+5) / pageSize)
+            totalPages: Math.floor((totalLength + pageSize - 1) / pageSize)
         });
     } catch(e) {
         console.log(e);
