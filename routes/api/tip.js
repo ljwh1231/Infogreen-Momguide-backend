@@ -891,12 +891,14 @@ router.get('/post', (req, res) => {
 
                     if (req.query.order === 'latest') {
                         sortedComments = await tip.getComments({
+                            where: {parentIndex: null},
                             limit: limit,
                             offset: limit * (Number(req.query.page)-1),
                             order: [['created_at', 'DESC']]
                         });
                     } else if (req.query.order === 'recommend') {
                         sortedComments = await tip.getComments({
+                            where: {parentIndex: null},
                             limit: limit,
                             offset: limit * (Number(req.query.page)-1),
                             order: [['likeNum', 'DESC']]

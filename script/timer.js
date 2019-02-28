@@ -10,6 +10,8 @@ function scheduler() {
     cron.schedule('*/1 * * * *', () => {
         moment.tz.setDefault("Asia/Seoul");
         const currentDate = moment();
+        const alarmObj = {};
+        let product;
 
         db.ProductReview.findAll({
             where: {}
@@ -18,7 +20,20 @@ function scheduler() {
                 const additionalReviews = await getProductAdditionalReviews();
                 if (additionalReviews.length === 0) {
                     if (moment.duration(currentDate.diff(reviews[i].dataValues.created_at)).asDays() > 30) {
-                        
+                        if (reviews[i].dataValues.cosmetic_index === null) {
+                            product = await db.LivingDB.findOne({
+                                where: {
+                                    index: reviews[i].dataValues.living_index
+                                }
+                            })
+                            
+                        } else if (reviews[i].dataValues.living_index === null) {
+                            
+                        }
+
+                        db.PrivateAlarm.create({ //imageUrl, content, linkUrl, category, categoryIndex
+
+                        })
                     }
                 } else {
 
