@@ -8,13 +8,21 @@ const db = require("../models/index");
 function scheduler() {
     cron.schedule('*/1 * * * *', () => {
         moment.tz.setDefault("Asia/Seoul");
+        const currentDate = moment();
 
         db.ProductReview.findAll({
             where: {}
         }).then(async (reviews) => {
-            // for (let i=0; i<reviews.length; ++i) {
-            //     const additionalReviews = await 
-            // }
+            for (let i=0; i<reviews.length; ++i) {
+                const additionalReviews = await getProductAdditionalReviews();
+                if (additionalReviews.length === 0) {
+                    if (moment.duration(currentDate.diff(reviews[i].dataValues.created_at)).asDays() > 30) {
+                        
+                    }
+                } else {
+
+                }
+            }
         });
     });
 }
