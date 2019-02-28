@@ -41,11 +41,18 @@ router.get('/', async (req, res) => {
 });
 
 /*
- * 개인 리뷰 목록 불러오기 : GET /api/review/member/list?page=1
+ * 개인 리뷰 목록 불러오기 : GET /api/review/member/list?page=1&category=living
  * AUTHORIZATION NEEDED
  */
 
 router.get('/member/list', async (req, res) => {
+    if(!req.query.category || !(req.query.category === 'living' || req.query.category === 'cosmetic')) {
+        res.status(400).json({
+            error: "invalid request"
+        });
+        return;
+    }
+
     try {
         let token = req.headers['authorization'];
         token = await util.decodeToken(token, res);
@@ -75,6 +82,7 @@ router.get('/member/list', async (req, res) => {
         const pageSize = 6;
 
         let reviews = await member.getProductReviews();
+        reviews = reviews.filter((review) => (req.query.category === 'living' ? review.dataValues.living_index !== null : review.dataValues.cosmetic_index !== null));
         reviews = (reviews.slice((page-1) * pageSize, page * pageSize));
         const result = [];
 
