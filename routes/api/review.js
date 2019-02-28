@@ -752,7 +752,6 @@ router.post('/like', async (req, res) => {
             })
         } else {
             const like = await db.LikeOrHate.create({
-                index: Number(req.body.reviewId),
                 assessment: true
             });
             member.addLikeOrHate(like);
