@@ -11,5 +11,6 @@ router.use('/review', require('./review'));
 router.use('/like', require('./like'));
 router.use('/report', require('./report'));
 router.use('/alarm', require('./alarm'));
+router.use('/main', require('./main'));
 
 module.exports = router;
