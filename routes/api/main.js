@@ -6,7 +6,6 @@ const db = require("../../models/index");
 const config = require('../../config/config');
 const util = require('./util');
 
-// 메인 페이지에 걸 꿀팁 3개 이벤트 2개
 /*
     > 메인 페이지에 걸 꿀팁 3개 이벤트 2개를 가져오는 api
     > GET /api/main/tipEvent

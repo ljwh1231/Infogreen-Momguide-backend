@@ -1215,7 +1215,8 @@ router.post('/application', (req, res) => {
 
                 db.Event.findOne({
                     where: {
-                        index: req.body.eventIndex
+                        index: req.body.eventIndex,
+                        expirationDate: {$ne: null}
                     }
                 }).then((event) => {
                     if (!event) {
@@ -1333,6 +1334,103 @@ router.get('/post/like', (req, res) => {
         });
         return;
     });    
+});
+
+/*
+    > 해당 유저가 특정 이벤트를 신청했는지의 유무를 가져오는 api
+    > GET /api/event/application?index=1
+    > header에 token을 넣어서 요청. token 앞에 "Bearer " 붙일 것. req.body.eventIndex로 신청 확인하고자 하는 이벤트 인덱스 전달
+    > error: {
+          "invalid request": 올바른 req가 전달되지 않음
+          "no such member": 존재하지 않는 회원
+          "no such event": 존재하지 않는 이벤트
+          "find error": db에 있는 정보를 찾는 데에 실패
+          "unauthorized request": 권한 없는 접근
+      }
+    > application {
+        true: 신청한 이벤트
+        false: 신청하지 않은 이벤트    
+    }
+*/
+router.get('/application', (req, res) => {
+    let token = req.headers['authorization'];
+
+    util.decodeToken(token, res).then((token) => {
+        if (!token.index || !token.email || !token.nickName) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        if (!req.query.eventIndex로) {
+            res.status(400).json({
+                error: "invalid request"
+            });
+            return;
+        }
+
+        db.MemberInfo.findOne({
+            where: {
+                index: token.index,
+                email: token.email,
+                nickName: token.nickName
+            }
+        }).then((member) => {
+            if (!member) {
+                res.status(424).json({
+                    error: "no such member"
+                });
+                return;
+            } else {
+                db.Event.findOne({
+                    where: {
+                        index: Number(req.query.eventIndex로),
+                        expirationDate: {$ne: null}
+                    }
+                }).then(async (event) => {
+                    if (!event) {
+                        res.status(424).json({
+                            error: "no such event"
+                        });
+                    } else {
+                        const applications = await member.getEvents({
+                            where: {
+                                expirationDate: {$ne: null},
+                                index: Number(req.query.eventIndex로)
+                            }
+                        });
+
+                        if (!applications) {
+                            res.status(424).json({
+                                error: "find error"
+                            });
+                            return;
+                        }
+
+                        if (applications.length === 0) {
+                            res.json({
+                                application: false
+                            });
+                            return;
+                        } else {
+                            res.json({
+                                application: true
+                            });
+                            return;
+                        }
+
+
+                    }
+                });
+            }
+        });
+    }).catch((error) => {
+        res.status(403).json({
+            error: "unauthorized request"
+        });
+        return;
+    });
 });
 
 module.exports = router;
