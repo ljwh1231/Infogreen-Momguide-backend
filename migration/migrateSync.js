@@ -122,9 +122,6 @@ const createCosmeticComponents = async (row) => {
     const eye = row[14];
     const caution = row[15];
     const remarks = row[16];
-    console.log(cancer);
-    console.log(typeof cancer);
-    return;
 
     let slsSles = row[17];
     if(slsSles === '1') {

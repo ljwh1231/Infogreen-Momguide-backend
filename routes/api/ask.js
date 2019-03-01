@@ -459,6 +459,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
                         } else {
                             if (!(params.Key === "NO") && !(params.Key === "NO")) {
                                 s3.putObject(params, (err, data) => {
+                                    console.log(err);
                                     if (err) {
                                         res.status(424).json({
                                             error: "s3 store failed"
@@ -480,6 +481,7 @@ router.post('/requestIngredAnal', formidable(), (req, res) => {
         });
 
     }).catch((error) => {
+        
         res.status(403).json({
             error: "unauthorized request"
         });
