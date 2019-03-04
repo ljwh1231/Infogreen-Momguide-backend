@@ -14,7 +14,7 @@ app.use(bodyParser.json());
 
 app.use(require('./routes'));
 
-const port = 1234;
+const port = 8080;
 sequelize.sync().then(() => {
     app.listen(port, () => {
         console.log('Express server listening on port ' + port);
