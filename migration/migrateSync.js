@@ -190,7 +190,7 @@ const createCosmeticComponents = async (row) => {
     
     let resultObj = {
         index: index,
-        name: name,
+        korName: name,
         diffName: diffName,
         engName: engName,
         cas: cas,
