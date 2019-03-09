@@ -63,6 +63,7 @@ typings/
 # webstrom
 .idea
 
+nohup.out
 config.js
 package-lock.json
 yarn.lock
