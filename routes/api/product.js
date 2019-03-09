@@ -205,7 +205,8 @@ router.get('/goodIngredientItem', (req, res) => {
                 'category': categoryObject[mainCategory][subCategory],
                 'includeDanger': false,
                 'includeToxic': false,
-                'includeCare': false
+                'includeCare': false,
+                'ingredient': 'O'
             },
             order: db.sequelize.literal('rand()')
         }).done(function(err, result) {

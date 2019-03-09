@@ -1363,7 +1363,7 @@ router.post('/requestPassword', (req, res) => {
                 from: config.fromEmail,
                 subject: 'Password Reset Verfication Email',
                 text: 'Password Reset',
-                html: '<a href="http://localhost:3000/passwordReset?token=' + token + '">Password Reset</a>',
+                html: '<a href="http://momguide.co.kr/passwordReset?token=' + token + '">Password Reset</a>',
             };
     
             sgMail.send(msg);
