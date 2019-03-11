@@ -105,6 +105,8 @@ MemberInfo.belongsToMany(PublicAlarm, {through: MemberToPublicAlarm, onDelete: '
 const PrivateAlarm = require('./PrivateAlarm')(sequelize, Sequelize);
 MemberInfo.hasMany(PrivateAlarm, {onDelete: 'cascade'});
 
+const Faq = require('./Faq')(sequelize, Sequelize);
+
 module.exports = {
     CosmeticIngredient,
     CosmeticDB,
@@ -127,5 +129,6 @@ module.exports = {
     PublicAlarm,
     MemberToPublicAlarm,
     PrivateAlarm,
+    Faq,
     sequelize
 };

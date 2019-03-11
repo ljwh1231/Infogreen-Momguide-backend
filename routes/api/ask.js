@@ -1816,4 +1816,28 @@ router.put('/answerOneToOne', formidable(), (req, res) => {
     });
 });
 
+
+/*
+    > Faq 목록 불러오기
+    > GET /api/ask/Faq
+    > {
+        
+      }
+*/
+router.get('/Faq', (req, res) => {
+
+    db.Faq.findAll({
+    }).done(function(err, result) {
+        if (err) {
+            console.log(err)
+            res.json(err);
+        }
+        else {
+            res.json(result);
+        }
+    });
+
+});
+
+
 module.exports = router;
