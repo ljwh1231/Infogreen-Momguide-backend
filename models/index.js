@@ -107,6 +107,8 @@ MemberInfo.hasMany(PrivateAlarm, {onDelete: 'cascade'});
 
 const Faq = require('./Faq')(sequelize, Sequelize);
 
+const Slider = require('./Slider')(sequelize, Sequelize);
+
 module.exports = {
     CosmeticIngredient,
     CosmeticDB,
@@ -130,5 +132,6 @@ module.exports = {
     MemberToPublicAlarm,
     PrivateAlarm,
     Faq,
+    Slider,
     sequelize
 };

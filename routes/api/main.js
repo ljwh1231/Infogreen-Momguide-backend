@@ -51,4 +51,37 @@ router.get('/tipEvent', (req, res) => {
 
 });
 
+
+/*
+    > 메인 페이지에 active한 슬라이더 가져오는 api
+    > GET /api/main/slider
+    > req로 전달할 것 없음.
+    > error: {
+          "find error": db에서 정보를 찾는 데에 오류 발생
+      }
+    > {
+        
+      }
+*/
+router.get('/slider', (req, res) => {
+
+    db.Slider.findAll({
+        where: {
+            isActive: true
+        },
+        order: [['order', 'ASC']]
+    }).then((sliders) => {
+        if (!sliders) {
+            res.status(424).json({
+                error: 'find error'
+            });
+            return;
+        } else{
+            res.json(sliders);
+            return;
+        }
+    });
+
+});
+
 module.exports = router;
